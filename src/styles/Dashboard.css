@@ -1,0 +1,71 @@
+/* Dashboard Container */
+.admin-dashboard {
+    padding: 2rem;
+    background-color: #f8f9fc;
+    min-height: 100vh;
+}
+
+/* Stat Cards Grid */
+.stats-grid {
+    display: flex;
+    flex-direction: row; /* Stacks cards row-wise */
+    gap: 10px;              /* This creates the uniform space between cards */
+    width: 100%;
+}
+
+.stat-card {
+    /* Ensure the cards don't have bottom margins that stack with the gap */
+    margin-bottom: 0 !important; 
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.stat-card.success { border-left-color: #1cc88a; }
+.stat-card.danger { border-left-color: #e74a3b; }
+.stat-card.info { border-left-color: #36b9cc; }
+
+.stat-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #858796;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #5a5c69;
+}
+/* Charts and Tables Row */
+.content-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.data-box {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.data-box h3 {
+    font-size: 1rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Responsive for Mobile */
+@media (max-width: 768px) {
+    .content-row {
+        grid-template-columns: 1fr;
+    }
+}
