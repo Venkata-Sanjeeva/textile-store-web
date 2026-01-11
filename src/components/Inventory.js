@@ -43,19 +43,27 @@ const Inventory = () => {
     // 1. Add Category Logic
     const handleAddCategory = async (e) => {
         e.preventDefault();
-        await axios.post('http://localhost:8080/api/categories', { name: categoryName });
-        setCategoryName('');
-        fetchData();
-        setMessage({ type: 'success', text: 'Category Added!' });
+        try {
+            await axios.post('http://localhost:8080/api/categories', { name: categoryName });
+            setCategoryName('');
+            fetchData();
+            setMessage({ type: 'success', text: 'Category Added!' });
+        } catch (error) {
+            setMessage({ type: 'danger', text: 'Failed to Add Category!' });
+        }
     };
 
     // 2. Add Brand Logic
     const handleAddBrand = async (e) => {
         e.preventDefault();
-        await axios.post('http://localhost:8080/api/brands', { name: brandName });
-        setBrandName('');
-        fetchData();
-        setMessage({ type: 'success', text: 'Brand Added!' });
+        try {
+            await axios.post('http://localhost:8080/api/brands', { name: brandName });
+            setBrandName('');
+            fetchData();
+            setMessage({ type: 'success', text: 'Brand Added!' });
+        } catch (error) {
+            setMessage({ type: 'danger', text: 'Failed to Add Brand!' });
+        }
     };
 
     // 3. Add Product Logic (Using FormData for Image)

@@ -16,17 +16,22 @@ const LowStockAlert = () => {
             <div className="card-body">
                 <table className="table">
                     <thead>
-                        <tr><th>Product</th><th>Stock</th></tr>
+                        <tr>
+                            <th>Product</th>
+                            <th>Available Variants</th>
+                            <th>Stock</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {lowStock.length > 0 ? lowStock.map(p => (
                             <tr key={p.id}>
                                 <td>{p.name}</td>
+                                <td className="text-danger font-weight-bold">{p.variants}</td>
                                 <td className="text-danger font-weight-bold">{p.currentStock}</td>
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="2" className="text-center">No low stock items</td>
+                                <td colSpan="3" className="text-center">No low stock items</td>
                             </tr>
                         )}
                     </tbody>
