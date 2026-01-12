@@ -12,6 +12,8 @@ const BillingSummary = () => {
     const [cart, setCart] = useState([]);
     const [search, setSearch] = useState("");
     const [activeProduct, setActiveProduct] = useState(null);
+    const [showCamera, setShowCamera] = useState(false);
+    const [discountOfVariants, setDiscountOfVariants] = useState({});
 
     // Fetch Inventory
     useEffect(() => {
@@ -19,9 +21,6 @@ const BillingSummary = () => {
             .then(res => setInventory(res.data))
             .catch(err => console.error("Error fetching inventory", err));
     }, []);
-
-    // Inside your component:
-    const [showCamera, setShowCamera] = useState(false);
 
     useEffect(() => {
         if (showCamera) {
@@ -64,9 +63,10 @@ const BillingSummary = () => {
         }
     };
 
-    const handleAddToCart = (product, variant) => {
+    const handleAddToCart = (product, variant, discount = 0) => {
         const itemPrice = product.basePrice + variant.additionalPrice;
         const cartKey = variant.variantUniqueId;
+        setDiscountOfVariants(prev => ({ ...prev, [cartKey]: discount || 0 }));
         const exists = cart.find(x => x.cartKey === cartKey);
 
         if (exists) {
@@ -105,8 +105,20 @@ const BillingSummary = () => {
         }));
     };
 
-    const removeFromCart = (cartKey) => setCart(cart.filter(x => x.cartKey !== cartKey));
-    const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0);
+    const updateDiscount = (cartKey, discount = 0) => {
+        setDiscountOfVariants(prev => ({ ...prev, [cartKey]: discount }));
+    }
+
+    const removeFromCart = (cartKey) => {
+        setCart(cart.filter(x => x.cartKey !== cartKey))
+        setDiscountOfVariants(prev => {
+            const updated = { ...prev };
+            delete updated[cartKey];
+            return updated;
+        });
+    };
+
+    const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0) - cart.reduce((a, c) => a + (c.price * (discountOfVariants[c.cartKey] || 0) / 100) * c.qty, 0);
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
 
@@ -147,9 +159,9 @@ const BillingSummary = () => {
 
         // 3. Compact Table Generation
         const tableRows = cart.map(item => [
-            `${item.brand} ${item.name}\nSize: ${item.size}\nColour: ${item.color}`,
+            `${item.brand} ${item.name}\nSize: ${item.size}\nColour: ${item.color}\nOriginal: Rs.${item.price}\nDisc: ${discountOfVariants[item.cartKey] || 0}%`,
             `${item.qty}`,
-            `${(item.price * item.qty).toFixed(2)}`
+            `${((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}`
         ]);
 
         autoTable(doc, {
@@ -199,7 +211,7 @@ const BillingSummary = () => {
             }));
 
             console.log(billingProducts);
-            
+
             await axios.put('http://localhost:8080/api/admin/billing', billingProducts)
                 .then(res => console.log("Billing updated", res.data))
                 .catch(err => console.error("Error updating billing", err));
@@ -218,7 +230,7 @@ const BillingSummary = () => {
         // 6. Footer
         doc.setFont("courier", "italic");
         doc.setFontSize(8);
-        doc.text("Thank you for shopping!", pageWidth / 2, finalY + 5, { align: "center" });
+        doc.text("Thank you for shopping at ICON!", pageWidth / 2, finalY + 5, { align: "center" });
         doc.text("No exchange without bill.", pageWidth / 2, finalY + 9, { align: "center" });
 
         // Save
@@ -356,14 +368,33 @@ const BillingSummary = () => {
                                     <div className="cart-item-left">
                                         <span className="cart-item-name">{item.name}</span>
                                         <span className="cart-item-meta">{item.color} • {item.size}</span>
+                                        <br/>
+                                        <span className="cart-item-meta" >Rs. 
+                                            <span style={{textDecoration: "line-through"}}>{item.price}</span>
+                                        </span>
                                     </div>
+
+                                    <div className="cart-item-middle">
+                                        <div className="discount-control">
+                                            <span className="cart-item-discount">Discount %</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="99"
+                                                className="discount-input"
+                                                value={discountOfVariants[item.cartKey] || ""}
+                                                onChange={e => updateDiscount(item.cartKey, Number(e.target.value))}
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div className="cart-item-right">
                                         <div className="qty-controls">
                                             <button onClick={() => updateQty(item.cartKey, -1)}>−</button>
                                             <span>{item.qty}</span>
                                             <button onClick={() => updateQty(item.cartKey, 1)}>+</button>
                                         </div>
-                                        <div className="cart-item-price">₹{item.price * item.qty}</div>
+                                        <div className="cart-item-price">₹{((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}</div>
                                         <button className="remove-btn" onClick={() => removeFromCart(item.cartKey)}>×</button>
                                     </div>
                                 </div>

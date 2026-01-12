@@ -281,7 +281,7 @@
 
 /* RIGHT SIDE: BILLING */
 .billing-sidebar {
-  width: 420px;
+  width: 520px;
   background: var(--sidebar-bg);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -295,6 +295,48 @@
   font-size: 1.25rem;
   font-weight: 700;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* Container for the discount label and input */
+.discount-control {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+}
+
+.cart-item-discount {
+    font-size: 0.65rem;
+    color: var(--text-muted); 
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+/* The 2-digit width input */
+.discount-input {
+    width: 45px; /* Perfect for 2 digits */
+    padding: 2px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: bold;
+    color: rgb(216, 0, 0);
+}
+
+/* Remove arrows (spinners) from number input */
+.discount-input::-webkit-outer-spin-button,
+.discount-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Focus state for better UX */
+.discount-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #007bff);
+    box-shadow: 0 0 3px rgba(0,123,255,0.2);
 }
 
 .cart-list {
@@ -487,7 +529,7 @@
 
 @media (max-width: 1024px) {
     .billing-sidebar {
-        width: 350px; /* Shrink sidebar slightly for tablets */
+        width: 400px; /* Shrink sidebar slightly for tablets */
     }
 }
 
