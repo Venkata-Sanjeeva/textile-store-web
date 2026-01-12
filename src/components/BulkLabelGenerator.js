@@ -1,24 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import axios from 'axios';
-import "../styles/BulkLabelGenerator.css";
 import NavbarComponent from './NavbarComponent';
 import CardComponent from './CardComponent';
 
 const BulkLabelGenerator = () => {
-
     const [loading, setLoading] = useState(false);
-    const [products, setProducts] = useState([]);
     const [inventory, setInventory] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const fetchProducts = async () => {
         setLoading(true);
         try {
             const res = await axios.get('http://localhost:8080/api/admin/products');
-            setProducts(res.data);
-            // FIX 1: Initialize inventory with products + a 'checked' property
             const initialInventory = res.data.map(p => ({
                 ...p,
                 variants: p.variants.map(v => ({ ...v, checked: false }))
@@ -31,109 +26,87 @@ const BulkLabelGenerator = () => {
         }
     };
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    useEffect(() => { fetchProducts(); }, []);
+
+    // --- Search Logic ---
+    const filteredInventory = inventory.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brand.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const generateBulkPDF = async () => {
         setLoading(true);
         try {
-            // 1. Filter: Get only products that have checked variants
-            // 2. Map: Inside those products, get only the variants that are checked
-            const selectedInventory = inventory
-                .map(product => ({
-                    ...product,
-                    variants: product.variants.filter(v => v.checked)
-                }))
-                .filter(product => product.variants.length > 0);
+            const selectedItems = inventory.flatMap(product => 
+                product.variants
+                    .filter(v => v.checked)
+                    .map(v => ({ 
+                        ...v, 
+                        productName: product.name, 
+                        brandName: product.brand.name, 
+                        totalPrice: product.basePrice + v.additionalPrice 
+                    }))
+            );
 
-            if (selectedInventory.length === 0) {
-                alert("Please select at least one variant to generate labels.");
+            if (selectedItems.length === 0) {
+                alert("Please select at least one variant.");
                 setLoading(false);
                 return;
             }
 
-            const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            const pageWidth = doc.internal.pageSize.getWidth();
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             const margin = 10;
-            const labelWidth = 60;
-            const labelHeight = 45;
-            const spacing = 5;
-            const labelsPerRow = Math.floor((pageWidth - (margin * 2)) / (labelWidth + spacing));
+            const labelW = 60;
+            const labelH = 40;
+            const gap = 5;
+            const cols = 3;
+            
+            let x = margin;
+            let y = margin;
+            let colCount = 0;
 
-            let currentX = margin;
-            let currentY = margin;
-            let count = 0;
+            for (const item of selectedItems) {
+                const qrDataUrl = await QRCode.toDataURL(item.variantUniqueId, { margin: 1 });
 
-            for (const product of selectedInventory) {
-                for (const variant of product.variants) {
-                    // 1. Data for QR
-                    const qrJson = JSON.stringify({
-                        pId: product.id,
-                        vId: variant.id,
-                        sku: `${product.brand.name.substring(0, 3)}-${variant.size}-${variant.color}`,
-                        price: product.basePrice + (variant.additionalPrice || 0)
-                    });
+                doc.setDrawColor(200);
+                doc.roundedRect(x, y, labelW, labelH, 2, 2, 'S');
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(item.brandName.toUpperCase(), x + 3, y + 7);
+                doc.setFontSize(10);
+                doc.setTextColor(0);
+                const title = doc.splitTextToSize(item.productName, 35);
+                doc.text(title, x + 3, y + 13);
+                doc.setFontSize(8);
+                doc.text(`Size: ${item.size}`, x + 3, y + 25);
+                doc.text(`Color: ${item.color || 'N/A'}`, x + 3, y + 29);
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Rs. ${item.totalPrice}`, x + 3, y + 36);
+                doc.addImage(qrDataUrl, 'PNG', x + 38, y + 15, 20, 20);
+                doc.setFontSize(6);
+                doc.setFont("helvetica", "normal");
+                doc.text(item.variantUniqueId, x + 38, y + 37);
 
-                    // 2. Generate QR
-                    const qrDataUrl = await QRCode.toDataURL(qrJson, { margin: 1 });
+                colCount++;
+                if (colCount >= cols) {
+                    colCount = 0;
+                    x = margin;
+                    y += labelH + gap;
+                } else {
+                    x += labelW + gap;
+                }
 
-                    // 3. Draw Label Design
-                    doc.setDrawColor(220, 220, 220);
-                    doc.roundedRect(currentX, currentY, labelWidth, labelHeight, 2, 2, 'S');
-
-                    // 4. Brand & Name
-                    doc.setFontSize(7);
-                    doc.setFont("helvetica", "bold");
-                    doc.setTextColor(150, 150, 150);
-                    doc.text(product.brand.name.toUpperCase(), currentX + 3, currentY + 6);
-
-                    doc.setFontSize(9);
-                    doc.setTextColor(0, 0, 0);
-                    const splitName = doc.splitTextToSize(product.name, labelWidth - 25);
-                    doc.text(splitName, currentX + 3, currentY + 11);
-
-                    // 5. Variant Details
-                    doc.setFontSize(8);
-                    doc.setFont("helvetica", "normal");
-                    doc.text(`Size: ${variant.size}`, currentX + 3, currentY + 22);
-                    doc.text(`Color: ${variant.color}`, currentX + 3, currentY + 26);
-
-                    // 6. Add QR Code
-                    doc.addImage(qrDataUrl, 'PNG', currentX + labelWidth - 22, currentY + 18, 18, 18);
-
-                    // 7. Add Price
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'bold');
-                    doc.text(`INR ${product.basePrice + variant.additionalPrice}`, currentX + 2, currentY + 40);
-
-                    // 8. Update Coordinates
-                    count++;
-                    if (count % labelsPerRow === 0) {
-                        currentX = margin;
-                        currentY += labelHeight + spacing;
-                    } else {
-                        currentX += labelWidth + spacing;
-                    }
-
-                    // 9. New Page Check
-                    if (currentY + labelHeight > 280) {
-                        doc.addPage();
-                        currentY = margin;
-                        currentX = margin;
-                    }
+                if (y + labelH > 280) {
+                    doc.addPage();
+                    y = margin;
+                    x = margin;
+                    colCount = 0;
                 }
             }
-
-            doc.save(`Inventory_Labels_${Date.now()}.pdf`);
+            doc.save(`Labels_${Date.now()}.pdf`);
         } catch (err) {
-            console.error("PDF Generation Error:", err);
-            alert("Error generating PDF. Check console.");
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -142,86 +115,50 @@ const BulkLabelGenerator = () => {
     return (
         <>
             <NavbarComponent />
-            <div className="inventory-container" style={containerStyle}>
-
-                {/* TOP HEADER SECTION */}
-                <div className="bulk-generator-header" style={headerStyle}>
-                    <div className="text-section">
-                        <h3 style={headingStyle}>Inventory Label Management</h3>
-                        <p style={subheadingStyle}>Generate QR code sticker sheets for your stock.</p>
+            <div className="container mt-4">
+                {/* Header Section */}
+                <div className="bg-white shadow-sm rounded p-4 mb-4">
+                    <div className="row align-items-center">
+                        <div className="col-md-4">
+                            <h3 className="mb-0">Tag Generator</h3>
+                            <p className="text-muted small mb-0">Select products for thermal stickers</p>
+                        </div>
+                        <div className="col-md-4">
+                            <input 
+                                type="text"
+                                className="form-control"
+                                placeholder="Search by product or brand..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="col-md-4 text-end">
+                            <button className="btn btn-primary w-100" onClick={generateBulkPDF} disabled={loading}>
+                                {loading ? "Generating..." : "Print Selected Labels"}
+                            </button>
+                        </div>
                     </div>
-
-                    <button
-                        className="bulk-gen-btn"
-                        onClick={generateBulkPDF}
-                        disabled={loading}
-                        style={buttonStyle}
-                    >
-                        {loading ? "..." : "🚀 Generate Labels"}
-                    </button>
                 </div>
 
-                {/* LIST OF CARDS SECTION */}
-                <div className="product-grid" style={gridStyle}>
-                    {inventory.map(item => (
-                        <CardComponent
-                            key={item.id}
-                            product={item} // 'item' contains the 'checked' status from parent state
-                            setInventory={setInventory}
-                        />
-                    ))}
-                </div>
+                {/* Grid Section */}
+                {loading && inventory.length === 0 ? (
+                    <div className="text-center mt-5">Loading Inventory...</div>
+                ) : (
+                    <div className="row g-4">
+                        {filteredInventory.length > 0 ? (
+                            filteredInventory.map(item => (
+                                <div className="col-md-4 col-lg-3 d-flex justify-content-center" key={item.id}>
+                                    <CardComponent product={item} setInventory={setInventory} />
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center mt-5 text-muted">No products found matching "{searchTerm}"</div>
+                        )}
+                    </div>
+                )}
             </div>
         </>
     );
-};
-
-// --- CSS-in-JS Styles ---
-
-const containerStyle = {
-    padding: '20px',
-    maxWidth: '1200px',
-    margin: '0 auto'
-};
-
-const headerStyle = {
-    display: 'flex',
-    justifyContent: 'space-between', // Pushes text to left and button to right
-    alignItems: 'flex-start',
-    marginBottom: '30px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #eee'
-};
-
-const headingStyle = {
-    margin: 0,
-    fontSize: '24px',
-    color: '#333'
-};
-
-const subheadingStyle = {
-    margin: '5px 0 0 0',
-    color: '#666',
-    fontSize: '14px'
-};
-
-const buttonStyle = {
-    width: '180px', // Small fixed width
-    padding: '10px 15px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    whiteSpace: 'nowrap' // Prevents text from wrapping inside the small button
-};
-
-const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', // Responsive grid
-    gap: '20px',
-    marginTop: '20px'
 };
 
 export default BulkLabelGenerator;

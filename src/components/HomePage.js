@@ -1,123 +1,109 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Spinner, Button } from 'react-bootstrap';
 import axios from 'axios';
 import FilterSidebar from './FilterSidebar';
 import Product from './Product';
 import NavbarComponent from './NavbarComponent';
+import { log } from 'three';
 
 const HomePage = () => {
     const [filteredProducts, setFilteredProducts] = useState([]);
-
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isFiltering, setIsFiltering] = useState(true);
+    const [isFiltering, setIsFiltering] = useState(false);
 
-    // Inside your HomePage component, add these states and functions:
-    const [brands, setBrands] = useState([]); // To store brands for the filter dropdown
+    // Stores stock quantity indexed by uniqueId
+    const [prodQuantity, setProdQuantity] = useState({});
 
-    const [prodVariants, setProdVariants] = useState({}); // To store variants of a product if needed
-    const [catProducts, setCatProducts] = useState({}); // To store products if needed
-
-    const [prodQuantity, setProdQuantity] = useState({}); // To store total stock quantity per product
-
-    const fetchInitialProducts = () => {
+    // 1. Fetch initial products and metadata
+    const fetchInitialData = async () => {
         setLoading(true);
-        // Fetch all products initially (or just use your category-based fetch)
-        axios.get('http://localhost:8080/api/admin/products')
-            .then(res => {
-                setFilteredProducts(res.data);
-                setIsFiltering(false);
-                setLoading(false);
+        try {
+            const [prodRes, catRes, brandRes] = await Promise.all([
+                axios.get('http://localhost:8080/api/admin/products'),
+                axios.get('http://localhost:8080/api/categories'),
+                axios.get('http://localhost:8080/api/brands')
+            ]);
+
+            const products = prodRes.data;
+            // Pre-fetch stock quantities for all products
+            const variants = products.flatMap(product =>
+                axios.get(`http://localhost:8080/api/admin/variants/product/${product.uniqueId}`)
+                    .then(res => {
+                        const variants = res.data;
+                        const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+                        return { uniqueId: product.uniqueId, totalStock };
+                    })
+            );
+
+            // Wait for all stock quantities to be fetched
+            const stockData = await Promise.all(variants);
+            setProdQuantity(prev => {
+                const newStock = {};
+                stockData.forEach(item => {
+                    newStock[item.uniqueId] = item.totalStock;
+                });
+                return { ...prev, ...newStock };
             });
+
+            setFilteredProducts([...products]);
+            setCategories(catRes.data);
+            setBrands(brandRes.data);
+        } catch (err) {
+            console.error("Error loading initial data", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Add this function to handle the filter logic
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
+    // 2. Optimized Filter Handler
     const handleFilterUpdate = (filters) => {
         setIsFiltering(true);
         const { categoryId, brandId, size, searchTerm } = filters;
 
-        const ENDPOINT = "http://localhost:8080/api/admin/products/filter";
-        axios.get(ENDPOINT, { params: { categoryId, brandId, size, search: searchTerm } })
+        axios.get("http://localhost:8080/api/admin/products/filter", {
+            params: { categoryId, brandId, size, search: searchTerm }
+        })
             .then(res => {
                 setFilteredProducts(res.data);
+                setIsFiltering(false);
             })
             .catch(err => console.error(err));
     };
 
+    // 3. Fetch Stock/Variants for visible products only
+    // This uses the new uniqueId endpoint
+    useEffect(() => {
+        if (filteredProducts.length === 0) return;
+
+        filteredProducts.forEach(product => {
+            // Use the new mapping: /api/admin/variants/product/{uniqueId}
+            axios.get(`http://localhost:8080/api/admin/variants/product/${product.uniqueId}`)
+                .then(res => {
+                    const variants = res.data;
+                    const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+
+                    setProdQuantity(prev => ({
+                        ...prev,
+                        [product.uniqueId]: totalStock
+                    }));
+                })
+                .catch(err => console.error("Error fetching variants", err));
+        });
+    }, [filteredProducts]);
+
+    // 4. Dynamic Grouping by Category Name
     const groupedProducts = filteredProducts.reduce((groups, product) => {
-        const categoryName = product.category.name;
-        if (!groups[categoryName]) {
-            groups[categoryName] = [];
-        }
+        const categoryName = product.category?.name || "Uncategorized";
+        if (!groups[categoryName]) groups[categoryName] = [];
         groups[categoryName].push(product);
         return groups;
     }, {});
-
-    // Fetch categories and brands
-    useEffect(() => {
-        fetchInitialProducts();
-
-        axios.get('http://localhost:8080/api/categories')
-            .then(res => {
-                const data = res.data;
-                setCategories(data);
-
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Error fetching data", err);
-                setLoading(false);
-            });
-        axios.get('http://localhost:8080/api/brands')
-            .then(res => setBrands(res.data))
-            .catch(err => {
-                console.error("Error fetching brands", err);
-            });
-    }, []);
-
-    // Fetch products for each category
-    useEffect(() => {
-        for (let category of categories) {
-            const catId = category.id;
-
-            axios.get(`http://localhost:8080/api/admin/products/category/${catId}`)
-                .then(res => {
-                    const products = res.data;
-                    setCatProducts(prevState => ({ ...prevState, [catId]: products }));
-                })
-                .catch(err => {
-                    console.error(`Error fetching products for category ${catId}`, err);
-                });
-        }
-    }, [categories]);
-
-    // Fetch variants for each product
-    useEffect(() => {
-        for (let category of categories) {
-            const catId = category.id;
-            for (let product of catProducts[catId] || []) {
-                axios.get(`http://localhost:8080/api/admin/variants/${product.id}`)
-                    .then(res => {
-                        const variants = res.data;
-                        setProdVariants(prevState => ({ ...prevState, [product.id]: variants }));
-                    })
-                    .catch(err => {
-                        console.error(`Error fetching variants for product ${product.id}`, err);
-                    });
-            }
-        }
-    }, [catProducts]);
-
-    // Calculate total stock quantity for each product
-    useEffect(() => {
-        const quantities = {};
-        for (let productId in prodVariants) {
-            const variants = prodVariants[productId];
-            const totalQuantity = variants.reduce((sum, variant) => sum + variant.stockQuantity, 0);
-            quantities[productId] = totalQuantity;
-        }
-        setProdQuantity(quantities);
-    }, [prodVariants]);
 
     return (
         <>
@@ -136,7 +122,7 @@ const HomePage = () => {
                     ) : filteredProducts.length === 0 ? (
                         <div className="text-center mt-5">
                             <h4>No products matches your criteria.</h4>
-                            <Button variant="link" onClick={() => {window.location.reload()}}>Clear all filters</Button>
+                            <Button variant="link" onClick={() => { window.location.reload() }}>Clear all filters</Button>
                         </div>
                     ) : (
                         Object.keys(groupedProducts).map((categoryName) => (
@@ -148,7 +134,7 @@ const HomePage = () => {
                                 <Row xs={1} md={2} lg={4} className="g-4">
                                     {groupedProducts[categoryName].map(product => (
                                         <Col key={product.id}>
-                                            <Product product={product} productQuantity={prodQuantity} />
+                                            <Product product={product} totalStock={prodQuantity[product.uniqueId]} />
                                         </Col>
                                     ))}
                                 </Row>

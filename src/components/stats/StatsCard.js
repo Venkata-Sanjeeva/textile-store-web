@@ -1,10 +1,16 @@
-const StatsCard = ({ title, value, color }) => (
-    <div className={`col-md-4 card border-left-${color} shadow h-100 py-2`}>
-        <div className="card-body">
-            <div className="text-xs font-weight-bold text-uppercase mb-1">{title}</div>
-            <div className="h5 mb-0 font-weight-bold text-gray-800">{value}</div>
-        </div>
-    </div>
-);
+import "../../styles/StatsCard.css";
+const StatsCard = ({ title, value, color }) => {
+    const colorMap = {
+        primary: "#007bff",
+        success: "#28a745",
+        danger: "#dc3545"
+    };
 
+    return (
+        <div className="card shadow-sm border-0 p-3" style={{ borderLeft: `5px solid ${colorMap[color]}` }}>
+            <div className="text-muted small text-uppercase font-weight-bold">{title}</div>
+            <div className="h3 mb-0 font-weight-bold" style={{ color: colorMap[color] }}>{value}</div>
+        </div>
+    );
+};
 export default StatsCard;

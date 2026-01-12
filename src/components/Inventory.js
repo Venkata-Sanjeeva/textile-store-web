@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Container, Form, Button, Row, Col, Card, Tabs, Tab, Alert, Nav } from 'react-bootstrap';
+import { Container, Form, Button, Row, Col, Card, Tabs, Tab, Alert, Spinner } from 'react-bootstrap';
+import { v4 as uuidv4 } from "uuid";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NavbarComponent from './NavbarComponent';
 
 const Inventory = () => {
-    // States for data
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    // States for Form Inputs
+    // Form States
     const [categoryName, setCategoryName] = useState('');
     const [brandName, setBrandName] = useState('');
     const [product, setProduct] = useState({
@@ -17,183 +18,223 @@ const Inventory = () => {
     });
     const [image, setImage] = useState(null);
     const [message, setMessage] = useState({ type: '', text: '' });
+    
     const navigate = useNavigate();
 
-    // Fetch Categories and Brands for the Dropdowns
     useEffect(() => {
-        const token = JSON.parse(sessionStorage.getItem('token'));
-
-        if (token === undefined || token === null || token.role !== 'ADMIN') {
-            navigate('/login'); // Redirect to login if not authenticated
+        const user = JSON.parse(sessionStorage.getItem('token'));
+        if (!user || user.role !== 'ADMIN') {
+            navigate('/login');
+            return;
         }
         fetchData();
-    }, []);
+    }, [navigate]);
 
     const fetchData = async () => {
         try {
-            const catRes = await axios.get('http://localhost:8080/api/categories');
-            const brandRes = await axios.get('http://localhost:8080/api/brands');
+            const [catRes, brandRes] = await Promise.all([
+                axios.get('http://localhost:8080/api/categories'),
+                axios.get('http://localhost:8080/api/brands')
+            ]);
             setCategories(catRes.data);
             setBrands(brandRes.data);
         } catch (err) {
-            console.error("Authorization failed or server down", err);
+            console.error("Failed to fetch metadata", err);
         }
     };
 
-    // 1. Add Category Logic
     const handleAddCategory = async (e) => {
         e.preventDefault();
         try {
             await axios.post('http://localhost:8080/api/categories', { name: categoryName });
             setCategoryName('');
             fetchData();
-            setMessage({ type: 'success', text: 'Category Added!' });
+            setMessage({ type: 'success', text: `Category "${categoryName}" Added!` });
         } catch (error) {
             setMessage({ type: 'danger', text: 'Failed to Add Category!' });
         }
     };
 
-    // 2. Add Brand Logic
     const handleAddBrand = async (e) => {
         e.preventDefault();
         try {
             await axios.post('http://localhost:8080/api/brands', { name: brandName });
             setBrandName('');
             fetchData();
-            setMessage({ type: 'success', text: 'Brand Added!' });
+            setMessage({ type: 'success', text: `Brand "${brandName}" Added!` });
         } catch (error) {
             setMessage({ type: 'danger', text: 'Failed to Add Brand!' });
         }
     };
 
-    // 3. Add Product Logic (Using FormData for Image)
     const handleAddProduct = async (e) => {
         e.preventDefault();
+        setLoading(true);
+        
+        // Generate the Business Key: PROD-XXXXXX
+        const businessKey = `PROD-${uuidv4().substring(0, 8).toUpperCase()}`;
+        
         const formData = new FormData();
+        formData.append('uniqueId', businessKey);
         formData.append('name', product.name);
         formData.append('description', product.description);
-        formData.append('price', product.price);
-        formData.append('categoryId', Number(product.categoryId));
-        formData.append('brandId', Number(product.brandId));
+        formData.append('price', parseFloat(product.price)); // Ensure double/float
+        formData.append('categoryId', parseInt(product.categoryId)); // Ensure Long
+        formData.append('brandId', parseInt(product.brandId)); // Ensure Long
         formData.append('image', image);
-
-        console.log("Form Data Submitted:", product, image);
 
         try {
             await axios.post('http://localhost:8080/api/admin/products/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            setMessage({ type: 'success', text: 'Product Uploaded Successfully!' });
             
-            alert('Product Uploaded Successfully!');
-            window.location.reload();
-
+            setMessage({ type: 'success', text: `Product ${product.name} uploaded with ID: ${businessKey}` });
+            
+            // Optional: Redirect to variant management for the new product immediately
+            if(window.confirm("Product created! Do you want to add sizes/colors (variants) now?")) {
+                navigate(`/admin/products/${businessKey}/variants`);
+            } else {
+                window.location.reload();
+            }
         } catch (err) {
-            setMessage({ type: 'danger', text: 'Upload Failed! Are you logged in?' });
+            setMessage({ type: 'danger', text: err.response?.data || 'Upload Failed!' });
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleLogout = () => {
-        sessionStorage.removeItem('userRole');
-        window.location.href = '/login';
+        sessionStorage.clear();
+        navigate('/login');
     };
 
     return (
         <>
             <NavbarComponent />
-            <Container className="mt-5">
-            <h2 className="mb-4">
-                Inventory Management
-                <Button variant="outline-danger" className="float-end" onClick={handleLogout}>
-                    Logout
-                </Button>
-            </h2>
+            <Container className="mt-5 pb-5">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h2 className="fw-bold text-dark">Inventory Dashboard</h2>
+                </div>
 
-            {message.text && <Alert variant={message.type}>{message.text}</Alert>}
+                {message.text && (
+                    <Alert variant={message.type} onClose={() => setMessage({type:'', text:''})} dismissible>
+                        {message.text}
+                    </Alert>
+                )}
 
-            <Tabs defaultActiveKey="product" className="mb-3">
-                {/* PRODUCT TAB */}
-                <Tab eventKey="product" title="Add Product">
-                    <Card className="p-4">
-                        <Form onSubmit={handleAddProduct}>
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Product Name</Form.Label>
-                                        <Form.Control type="text" onChange={(e) => setProduct({ ...product, name: e.target.value })} required />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Price</Form.Label>
-                                        <Form.Control type="number" onChange={(e) => setProduct({ ...product, price: e.target.value })} required />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                <Tabs defaultActiveKey="product" className="mb-4 custom-tabs">
+                    <Tab eventKey="product" title="Step 1: Create Product">
+                        <Card className="shadow-sm border-0 p-4">
+                            <Form onSubmit={handleAddProduct}>
+                                <Row>
+                                    <Col md={6}>
+                                        <Form.Group className="mb-3">
+                                            <Form.Label className="small fw-bold text-uppercase">Product Name</Form.Label>
+                                            <Form.Control 
+                                                placeholder="e.g. Premium Cotton Tee" 
+                                                onChange={(e) => setProduct({ ...product, name: e.target.value })} 
+                                                required 
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={6}>
+                                        <Form.Group className="mb-3">
+                                            <Form.Label className="small fw-bold text-uppercase">Base Price (₹)</Form.Label>
+                                            <Form.Control 
+                                                type="number" 
+                                                placeholder="999" 
+                                                onChange={(e) => setProduct({ ...product, price: e.target.value })} 
+                                                required 
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Description</Form.Label>
-                                <Form.Control as="textarea" rows={2} onChange={(e) => setProduct({ ...product, description: e.target.value })} />
-                            </Form.Group>
+                                <Form.Group className="mb-3">
+                                    <Form.Label className="small fw-bold text-uppercase">Description</Form.Label>
+                                    <Form.Control 
+                                        as="textarea" 
+                                        rows={3} 
+                                        placeholder="Enter product details..."
+                                        onChange={(e) => setProduct({ ...product, description: e.target.value })} 
+                                    />
+                                </Form.Group>
 
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Category</Form.Label>
-                                        <Form.Select onChange={(e) => setProduct({ ...product, categoryId: e.target.value })} required>
-                                            <option value="">Select Category</option>
-                                            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                                        </Form.Select>
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Brand</Form.Label>
-                                        <Form.Select onChange={(e) => setProduct({ ...product, brandId: e.target.value })} required>
-                                            <option value="">Select Brand</option>
-                                            {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </Form.Select>
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                                <Row>
+                                    <Col md={6}>
+                                        <Form.Group className="mb-3">
+                                            <Form.Label className="small fw-bold text-uppercase">Category</Form.Label>
+                                            <Form.Select 
+                                                value={product.categoryId}
+                                                onChange={(e) => setProduct({ ...product, categoryId: e.target.value })} 
+                                                required
+                                            >
+                                                <option value="">Choose...</option>
+                                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                                            </Form.Select>
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={6}>
+                                        <Form.Group className="mb-3">
+                                            <Form.Label className="small fw-bold text-uppercase">Brand</Form.Label>
+                                            <Form.Select 
+                                                value={product.brandId}
+                                                onChange={(e) => setProduct({ ...product, brandId: e.target.value })} 
+                                                required
+                                            >
+                                                <option value="">Choose...</option>
+                                                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </Form.Select>
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Product Image</Form.Label>
-                                <Form.Control type="file" onChange={(e) => setImage(e.target.files[0])} required />
-                            </Form.Group>
+                                <Form.Group className="mb-4">
+                                    <Form.Label className="small fw-bold text-uppercase">Display Image</Form.Label>
+                                    <Form.Control type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} required />
+                                </Form.Group>
 
-                            <Button variant="primary" type="submit">Upload Product</Button>
-                        </Form>
-                    </Card>
-                </Tab>
+                                <Button variant="primary" type="submit" className="w-100 py-2" disabled={loading}>
+                                    {loading ? <Spinner size="sm" /> : "Register Product & Proceed"}
+                                </Button>
+                            </Form>
+                        </Card>
+                    </Tab>
 
-                {/* CATEGORY & BRAND TAB */}
-                <Tab eventKey="config" title="Categories & Brands">
-                    <Row>
-                        <Col md={6}>
-                            <Card className="p-3">
-                                <h5>Add Category</h5>
-                                <Form onSubmit={handleAddCategory}>
-                                    <Form.Control className="mb-2" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="e.g. Shirts" />
-                                    <Button variant="dark" type="submit">Save Category</Button>
-                                </Form>
-                            </Card>
-                        </Col>
-                        <Col md={6}>
-                            <Card className="p-3">
-                                <h5>Add Brand</h5>
-                                <Form onSubmit={handleAddBrand}>
-                                    <Form.Control className="mb-2" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="e.g. Nike" />
-                                    <Button variant="dark" type="submit">Save Brand</Button>
-                                </Form>
-                            </Card>
-                        </Col>
-                    </Row>
-                </Tab>
-            </Tabs>
-        </Container>
+                    <Tab eventKey="config" title="Step 0: Setup Metadata">
+                        <Row className="g-4">
+                            <Col md={6}>
+                                <Card className="h-100 shadow-sm border-0 p-3">
+                                    <h5 className="border-bottom pb-2">Categories</h5>
+                                    <Form onSubmit={handleAddCategory} className="mt-2">
+                                        <Form.Control 
+                                            className="mb-2" 
+                                            value={categoryName} 
+                                            onChange={(e) => setCategoryName(e.target.value)} 
+                                            placeholder="e.g. Shirts" 
+                                        />
+                                        <Button variant="dark" type="submit" size="sm">Add Category</Button>
+                                    </Form>
+                                </Card>
+                            </Col>
+                            <Col md={6}>
+                                <Card className="h-100 shadow-sm border-0 p-3">
+                                    <h5 className="border-bottom pb-2">Brands</h5>
+                                    <Form onSubmit={handleAddBrand} className="mt-2">
+                                        <Form.Control 
+                                            className="mb-2" 
+                                            value={brandName} 
+                                            onChange={(e) => setBrandName(e.target.value)} 
+                                            placeholder="e.g. Adidas" 
+                                        />
+                                        <Button variant="dark" type="submit" size="sm">Add Brand</Button>
+                                    </Form>
+                                </Card>
+                            </Col>
+                        </Row>
+                    </Tab>
+                </Tabs>
+            </Container>
         </>
     );
 };

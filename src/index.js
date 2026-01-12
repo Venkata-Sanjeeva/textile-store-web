@@ -11,6 +11,7 @@ import Dashboard from './components/Dashboard';
 import BillingSummary from './components/BillingSummary';
 import VariantManager from './components/VariantManager';
 import BulkLabelGenerator from './components/BulkLabelGenerator';
+import BarcodeScan from './components/BarcodeScan';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -24,6 +25,7 @@ const routes = createBrowserRouter([
     {path: "/admin/inventory", element: <AdminRoute children={<Inventory />}></AdminRoute>},
     {path: "/admin/billing", element: <AdminRoute children={<BillingSummary />}></AdminRoute>},
     {path: "/admin/print-labels", element: <AdminRoute children={<BulkLabelGenerator />}></AdminRoute>},
+    {path: "/admin/barcode", element: <AdminRoute children={<BarcodeScan />}></AdminRoute>},
     {path: "*", element: <div>404 Not Found</div>}
 ]);
 
