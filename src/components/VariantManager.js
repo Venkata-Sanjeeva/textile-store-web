@@ -120,8 +120,7 @@ const VariantManager = () => {
                             <Card.Body>
                                 <h5 className="mb-1">{product?.name}</h5>
                                 <div className="mb-2">
-                                    <Badge bg="secondary" className="me-1">{product?.category?.name}</Badge>
-                                    <Badge bg="outline-secondary">{product?.brand?.name}</Badge>
+                                    <Badge bg="secondary" className="me-1">{product?.brand?.name}</Badge>
                                 </div>
                                 <p className="text-primary fw-bold mb-0">Base Price: ₹{product?.basePrice}</p>
                             </Card.Body>

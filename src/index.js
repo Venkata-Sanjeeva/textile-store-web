@@ -13,6 +13,7 @@ import VariantManager from './components/VariantManager';
 import BulkLabelGenerator from './components/BulkLabelGenerator';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
+import SalesDashboard from './components/SalesDashboard';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -24,6 +25,7 @@ const routes = createBrowserRouter([
     {path: "/admin/inventory", element: <AdminRoute children={<Inventory />}></AdminRoute>},
     {path: "/admin/billing", element: <AdminRoute children={<BillingSummary />}></AdminRoute>},
     {path: "/admin/print-labels", element: <AdminRoute children={<BulkLabelGenerator />}></AdminRoute>},
+    {path: "/admin/sales", element: <AdminRoute children={<SalesDashboard />}></AdminRoute>},
     {path: "*", element: <div>404 Not Found</div>}
 ]);
 

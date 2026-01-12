@@ -207,10 +207,9 @@ const BillingSummary = () => {
                 productId: item.productId,
                 variantId: item.variantId,
                 variantUniqueId: item.cartKey,
-                quantity: item.qty
+                quantity: item.qty,
+                totalPrice: (item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty
             }));
-
-            console.log(billingProducts);
 
             await axios.put('http://localhost:8080/api/admin/billing', billingProducts)
                 .then(res => console.log("Billing updated", res.data))

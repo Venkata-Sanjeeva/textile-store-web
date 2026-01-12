@@ -31,6 +31,7 @@ const NavbarComponent = () => {
                                 <Nav.Link as={Link} to="/admin/inventory">Inventory</Nav.Link>
                                 <Nav.Link as={Link} to="/admin/billing">Billing</Nav.Link>
                                 <Nav.Link as={Link} to="/admin/print-labels">Print Labels</Nav.Link>
+                                <Nav.Link as={Link} to="/admin/sales">Sales</Nav.Link>
                             </>
                         )}
                     </Nav>
