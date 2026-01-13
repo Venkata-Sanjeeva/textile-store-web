@@ -4,6 +4,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NavbarComponent from './NavbarComponent';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const LoginPage = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
@@ -19,7 +21,7 @@ const LoginPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:8080/api/auth/login', credentials);
+            const response = await axios.post(`${BACKEND_API_URL}/auth/login`, credentials);
             // Save the token so the browser remembers the admin
             sessionStorage.setItem('token', JSON.stringify({
                 role: "ADMIN",

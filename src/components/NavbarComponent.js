@@ -38,9 +38,9 @@ const NavbarComponent = () => {
 
                     <Nav className="align-items-center">
                         {user ? (
-                            <NavDropdown 
-                                title={<span><PersonCircle className="me-1" /> {user.username}</span>} 
-                                id="admin-dropdown" 
+                            <NavDropdown
+                                title={<span><PersonCircle className="me-1" /> {user.username}</span>}
+                                id="admin-dropdown"
                                 align="end"
                             >
                                 <NavDropdown.Item href="#profile">Profile Settings</NavDropdown.Item>
@@ -50,9 +50,14 @@ const NavbarComponent = () => {
                                 </NavDropdown.Item>
                             </NavDropdown>
                         ) : (
-                            <Button variant="primary" size="sm" onClick={() => navigate("/login")}>
-                                Login
-                            </Button>
+                            <div>
+                                <Button variant="primary" size="sm" onClick={() => navigate("/register")} className="me-2">
+                                    Register
+                                </Button>
+                                <Button variant="primary" size="sm" onClick={() => navigate("/login")}>
+                                    Login
+                                </Button>
+                            </div>
                         )}
                     </Nav>
                 </Navbar.Collapse>

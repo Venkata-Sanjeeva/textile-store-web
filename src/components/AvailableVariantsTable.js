@@ -3,6 +3,8 @@ import { Table, Form, Button, Badge } from 'react-bootstrap';
 import { PencilSquare, CheckLg, XCircle, Trash } from 'react-bootstrap-icons';
 import axios from 'axios';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const AvailableVariantsTable = ({ availableVariants, setAvailableVariants }) => {
     const [editingId, setEditingId] = useState(null); 
     const [tempStock, setTempStock] = useState("");   
@@ -21,7 +23,7 @@ const AvailableVariantsTable = ({ availableVariants, setAvailableVariants }) => 
         try {
             // We send the whole variant object or just fields required by ProductVariant entity
             // The backend updateStock expects the ProductVariant object
-            await axios.put(`http://localhost:8080/api/admin/variants/update-stock`, {
+            await axios.put(`${BACKEND_API_URL}/admin/variants/update-stock`, {
                 ...variant,
                 stockQuantity: parseInt(tempStock)
             });
@@ -40,7 +42,7 @@ const AvailableVariantsTable = ({ availableVariants, setAvailableVariants }) => 
     const handleDelete = async (variantId) => {
         if (window.confirm("Are you sure you want to delete this variant? This cannot be undone.")) {
             try {
-                await axios.delete(`http://localhost:8080/api/admin/variants/${variantId}`);
+                await axios.delete(`${BACKEND_API_URL}/admin/variants/${variantId}`);
                 setAvailableVariants(availableVariants.filter(v => v.id !== variantId));
             } catch (err) {
                 alert("Error deleting variant");

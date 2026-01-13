@@ -6,11 +6,13 @@ import LowStockAlert from './stats/LowStockAlert';
 import NavbarComponent from './NavbarComponent';
 import "../styles/Dashboard.css";
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
 
     useEffect(() => {
-        axios.get('http://localhost:8080/api/admin/products/stats')
+        axios.get(`${BACKEND_API_URL}/admin/products/stats`)
             .then(res => setStats(res.data))
             .catch(err => console.error(err));
     }, []);

@@ -1,8 +1,8 @@
 import { Card, Badge } from 'react-bootstrap';
 
-export default function Product({ product, totalStock }) {
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
-    console.log(totalStock);
+function Product({ product, totalStock }) {
 
     const isOutOfStock = totalStock <= 0;
 
@@ -12,7 +12,7 @@ export default function Product({ product, totalStock }) {
             <div style={{ height: '220px', overflow: 'hidden', backgroundColor: '#f8f9fa' }}>
                 <Card.Img
                     variant="top"
-                    src={`http://localhost:8080/product-images/${product.imageUrl}`}
+                    src={`${BACKEND_API_URL}/product-images/${product.imageUrl}`}
                     style={{ 
                         height: '100%', 
                         width: '100%', 
@@ -64,3 +64,5 @@ export default function Product({ product, totalStock }) {
         </Card>
     );
 }
+
+export default Product;

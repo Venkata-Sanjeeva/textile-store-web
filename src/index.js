@@ -5,6 +5,7 @@ import reportWebVitals from './reportWebVitals';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import HomePage from './components/HomePage';
 import LoginPage from './components/LoginPage';
+import Register from './components/Register';
 import AdminRoute from './components/AdminRoute';
 import Inventory from './components/Inventory';
 import Dashboard from './components/Dashboard';
@@ -19,6 +20,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 const routes = createBrowserRouter([
     {path: "/", element: <HomePage/>},
+    {path: "/register", element: <Register />},
     {path: "/login", element: <LoginPage />},
     {path: "/admin/products/:productId/variants", element: <AdminRoute children={<VariantManager />}></AdminRoute>},
     {path: "/admin/dashboard", element: <AdminRoute children={<Dashboard />}></AdminRoute>},

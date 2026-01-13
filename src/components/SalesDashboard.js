@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import NavbarComponent from './NavbarComponent';
-import { log } from 'three';
+
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
 const SalesDashboard = () => {
     const [view, setView] = useState('daily');
@@ -17,7 +18,7 @@ const SalesDashboard = () => {
     const fetchSalesData = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/admin/sales/stats?view=${view}`);
+            const response = await fetch(`${BACKEND_API_URL}/admin/sales/stats?view=${view}`);
             const result = await response.json();
 
             // Sort data chronologically by label before setting state

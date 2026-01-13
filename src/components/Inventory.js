@@ -5,6 +5,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NavbarComponent from './NavbarComponent';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const Inventory = () => {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
@@ -33,8 +35,8 @@ const Inventory = () => {
     const fetchData = async () => {
         try {
             const [catRes, brandRes] = await Promise.all([
-                axios.get('http://localhost:8080/api/categories'),
-                axios.get('http://localhost:8080/api/brands')
+                axios.get(`${BACKEND_API_URL}/categories`),
+                axios.get(`${BACKEND_API_URL}/brands`)
             ]);
             setCategories(catRes.data);
             setBrands(brandRes.data);
@@ -46,7 +48,7 @@ const Inventory = () => {
     const handleAddCategory = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:8080/api/categories', { name: categoryName });
+            await axios.post(`${BACKEND_API_URL}/categories`, { name: categoryName });
             setCategoryName('');
             fetchData();
             setMessage({ type: 'success', text: `Category "${categoryName}" Added!` });
@@ -58,7 +60,7 @@ const Inventory = () => {
     const handleAddBrand = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:8080/api/brands', { name: brandName });
+            await axios.post(`${BACKEND_API_URL}/brands`, { name: brandName });
             setBrandName('');
             fetchData();
             setMessage({ type: 'success', text: `Brand "${brandName}" Added!` });
@@ -84,7 +86,7 @@ const Inventory = () => {
         formData.append('image', image);
 
         try {
-            await axios.post('http://localhost:8080/api/admin/products/upload', formData, {
+            await axios.post(`${BACKEND_API_URL}/admin/products/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             
@@ -101,11 +103,6 @@ const Inventory = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleLogout = () => {
-        sessionStorage.clear();
-        navigate('/login');
     };
 
     return (

@@ -5,6 +5,8 @@ import axios from 'axios';
 import NavbarComponent from './NavbarComponent';
 import CardComponent from './CardComponent';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const BulkLabelGenerator = () => {
     const [loading, setLoading] = useState(false);
     const [inventory, setInventory] = useState([]);
@@ -13,7 +15,7 @@ const BulkLabelGenerator = () => {
     const fetchProducts = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8080/api/admin/products');
+            const res = await axios.get(`${BACKEND_API_URL}/admin/products`);
             const initialInventory = res.data.map(p => ({
                 ...p,
                 variants: p.variants.map(v => ({ ...v, checked: false }))

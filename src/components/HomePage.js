@@ -4,7 +4,8 @@ import axios from 'axios';
 import FilterSidebar from './FilterSidebar';
 import Product from './Product';
 import NavbarComponent from './NavbarComponent';
-import { log } from 'three';
+
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
 const HomePage = () => {
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -21,15 +22,15 @@ const HomePage = () => {
         setLoading(true);
         try {
             const [prodRes, catRes, brandRes] = await Promise.all([
-                axios.get('http://localhost:8080/api/admin/products'),
-                axios.get('http://localhost:8080/api/categories'),
-                axios.get('http://localhost:8080/api/brands')
+                axios.get(`${BACKEND_API_URL}/admin/products`),
+                axios.get(`${BACKEND_API_URL}/categories`),
+                axios.get(`${BACKEND_API_URL}/brands`)
             ]);
 
             const products = prodRes.data;
             // Pre-fetch stock quantities for all products
             const variants = products.flatMap(product =>
-                axios.get(`http://localhost:8080/api/admin/variants/product/${product.uniqueId}`)
+                axios.get(`${BACKEND_API_URL}/admin/variants/product/${product.uniqueId}`)
                     .then(res => {
                         const variants = res.data;
                         const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
@@ -66,7 +67,7 @@ const HomePage = () => {
         setIsFiltering(true);
         const { categoryId, brandId, size, searchTerm } = filters;
 
-        axios.get("http://localhost:8080/api/admin/products/filter", {
+        axios.get(`${BACKEND_API_URL}/admin/products/filter`, {
             params: { categoryId, brandId, size, search: searchTerm }
         })
             .then(res => {
@@ -83,7 +84,7 @@ const HomePage = () => {
 
         filteredProducts.forEach(product => {
             // Use the new mapping: /api/admin/variants/product/{uniqueId}
-            axios.get(`http://localhost:8080/api/admin/variants/product/${product.uniqueId}`)
+            axios.get(`${BACKEND_API_URL}/admin/variants/product/${product.uniqueId}`)
                 .then(res => {
                     const variants = res.data;
                     const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);

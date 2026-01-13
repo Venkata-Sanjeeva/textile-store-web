@@ -7,6 +7,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const BillingSummary = () => {
     const [inventory, setInventory] = useState([]);
     const [cart, setCart] = useState([]);
@@ -17,7 +19,7 @@ const BillingSummary = () => {
 
     // Fetch Inventory
     useEffect(() => {
-        axios.get('http://localhost:8080/api/admin/products')
+        axios.get(`${BACKEND_API_URL}/admin/products`)
             .then(res => setInventory(res.data))
             .catch(err => console.error("Error fetching inventory", err));
     }, []);
@@ -211,7 +213,7 @@ const BillingSummary = () => {
                 totalPrice: (item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty
             }));
 
-            await axios.put('http://localhost:8080/api/admin/billing', billingProducts)
+            await axios.put(`${BACKEND_API_URL}/admin/billing`, billingProducts)
                 .then(res => console.log("Billing updated", res.data))
                 .catch(err => console.error("Error updating billing", err));
 

@@ -5,6 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AvailableVariantsTable from './AvailableVariantsTable';
 import NavbarComponent from './NavbarComponent';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const VariantManager = () => {
     // Note: productId in useParams() now refers to the 'unique_id' string from the URL
     const { productId } = useParams(); 
@@ -21,10 +23,10 @@ const VariantManager = () => {
         setLoading(true);
         try {
             // Updated to use the correct uniqueId-based endpoints
-            const prodRes = await axios.get(`http://localhost:8080/api/admin/products/unique/${productId}`);
-            
+            const prodRes = await axios.get(`${BACKEND_API_URL}/admin/products/unique/${productId}`);
+
             // New endpoint mapping: /api/admin/variants/product/{uniqueId}
-            const varRes = await axios.get(`http://localhost:8080/api/admin/variants/product/${productId}`);
+            const varRes = await axios.get(`${BACKEND_API_URL}/admin/variants/product/${productId}`);
 
             setProduct(prodRes.data);
             setAvailableVariants(varRes.data);
@@ -82,7 +84,7 @@ const VariantManager = () => {
         
         try {
             // Bulk create expects List<ProductVariantDTO>
-            await axios.post(`http://localhost:8080/api/admin/variants/bulk-create`, newVariants);
+            await axios.post(`${BACKEND_API_URL}/admin/variants/bulk-create`, newVariants);
             alert("New variants added successfully!");
 
             // Refresh existing list and clear form
@@ -114,7 +116,7 @@ const VariantManager = () => {
                         <Card className="sticky-top shadow-sm" style={{ top: '20px' }}>
                             <Card.Img 
                                 variant="top" 
-                                src={`http://localhost:8080/product-images/${product?.imageUrl}`} 
+                                src={`${BACKEND_API_URL}/product-images/${product?.imageUrl}`} 
                                 style={{ height: '200px', objectFit: 'contain' }}
                             />
                             <Card.Body>
