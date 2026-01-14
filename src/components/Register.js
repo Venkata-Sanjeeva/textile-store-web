@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import '../styles/Register.css';
-import NavbarComponent from './NavbarComponent';
+import { useState } from 'react';
+import { Container, Form, Button, Card, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import NavbarComponent from './NavbarComponent';
 
 const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
@@ -14,6 +15,7 @@ const Register = () => {
     });
 
     const [error, setError] = useState('');
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         setFormData({
@@ -22,7 +24,7 @@ const Register = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -38,100 +40,100 @@ const Register = () => {
         }
 
         const body = {
-            "username": formData.email,
-            "password": formData.password,
-        }
+            username: formData.email,
+            password: formData.password,
+        };
 
-        axios.post(`${BACKEND_API_URL}/user/register`, body)
-            .then(response => {
-                // Simulating API call
-                setTimeout(() => {
-                    alert("Admin Account Created! Redirecting to Dashboard...");
-                    sessionStorage.setItem('token', JSON.stringify({
-                        role: "ADMIN",
-                        isAuthenticated: true,
-                        ...response.data
-                    }));
-                    window.location.href = "/admin/dashboard";
-                }, 1000);
-                console.log("API Response:", response.data);
-            })
-            .catch(error => {
-                console.error("API Error:", error);
-                setError("Failed to register admin. Please try again.");
-            });
+        try {
+            const response = await axios.post(`${BACKEND_API_URL}/user/register`, body);
+            
+            // Save the token so the browser remembers the admin
+            sessionStorage.setItem('token', JSON.stringify({
+                role: "ADMIN",
+                isAuthenticated: true,
+                ...response.data
+            }));
+
+            alert("Admin Account Created! Redirecting to Dashboard...");
+            navigate('/admin/dashboard');
+        } catch (err) {
+            console.error("API Error:", err);
+            setError("Failed to register admin. Please try again.");
+        }
     };
 
     return (
         <>
             <NavbarComponent />
-            <div className="register-container">
-                <div className="register-card">
+            <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
+                <Card style={{ width: '450px' }} className="shadow p-4">
+                    <Card.Body>
+                        <h3 className="text-center mb-4">Admin Registration</h3>
+                        
+                        {error && <Alert variant="danger">{error}</Alert>}
 
-                    <form onSubmit={handleSubmit} className="register-form">
+                        <Form onSubmit={handleSubmit}>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Full Name</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="fullName"
+                                    placeholder="e.g. Alex Rivera"
+                                    value={formData.fullName}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </Form.Group>
 
-                        <div className="register-header">
-                            <h2>Admin Registration</h2>
-                        </div>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Business Email</Form.Label>
+                                <Form.Control
+                                    type="email"
+                                    name="email"
+                                    placeholder="admin@clothingstore.com"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </Form.Group>
 
-                        {error && <div className="error-message">{error}</div>}
+                            <Form.Group className="mb-3">
+                                <Form.Label>Password</Form.Label>
+                                <Form.Control
+                                    type="password"
+                                    name="password"
+                                    placeholder="••••••••"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </Form.Group>
 
-                        <div className="input-group">
-                            <label>Full Name</label>
-                            <input
-                                type="text"
-                                name="fullName"
-                                value={formData.fullName}
-                                onChange={handleChange}
-                                placeholder="e.g. Alex Rivera"
-                                required
-                            />
-                        </div>
+                            <Form.Group className="mb-4">
+                                <Form.Label>Confirm Password</Form.Label>
+                                <Form.Control
+                                    type="password"
+                                    name="confirmPassword"
+                                    placeholder="••••••••"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </Form.Group>
 
-                        <div className="input-group">
-                            <label>Business Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="admin@clothingstore.com"
-                                required
-                            />
-                        </div>
+                            <Button variant="primary" type="submit" className="w-100 mb-3">
+                                Register Admin
+                            </Button>
 
-                        <div className="input-group">
-                            <label>Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                required
-                            />
-                        </div>
-
-                        <div className="input-group">
-                            <label>Confirm Password</label>
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                required
-                            />
-                        </div>
-
-                        <button type="submit" className="register-btn">Register Admin</button>
-                    </form>
-
-                    <div className="register-footer">
-                        <p>Already have an admin account? <a href="/login">Login</a></p>
-                    </div>
-                </div>
-            </div>
+                            <div className="text-center">
+                                <small>
+                                    Already have an admin account? <a href="/login" style={{textDecoration: 'none'}}>Login</a>
+                                </small>
+                            </div>
+                        </Form>
+                    </Card.Body>
+                </Card>
+            </Container>
         </>
     );
 };
