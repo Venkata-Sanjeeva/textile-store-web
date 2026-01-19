@@ -16,12 +16,15 @@ const BillingSummary = () => {
     const [activeProduct, setActiveProduct] = useState(null);
     const [showCamera, setShowCamera] = useState(false);
     const [discountOfVariants, setDiscountOfVariants] = useState({});
+    const [inventoryLoading, setInventoryLoading] = useState(true);
 
     // Fetch Inventory
     useEffect(() => {
+        setInventoryLoading(true);
         axios.get(`${BACKEND_API_URL}/admin/products`)
             .then(res => setInventory(res.data))
-            .catch(err => console.error("Error fetching inventory", err));
+            .catch(err => console.error("Error fetching inventory", err))
+            .finally(() => setInventoryLoading(false));
     }, []);
 
     useEffect(() => {
@@ -248,7 +251,7 @@ const BillingSummary = () => {
 
         // Clean up memory
         setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-        
+
         setCart([]);
         alert("Receipt generated!");
         window.location.reload();
@@ -306,18 +309,22 @@ const BillingSummary = () => {
                         </button>
                     </div>
 
-                    <div className="product-grid">
-                        {inventory
-                            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                            .map(product => (
-                                <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
-                                    <span className="brand-tag">{product.brand.name}</span>
-                                    <h3>{product.name}</h3>
-                                    <p className="price-label">Starts at ₹{product.basePrice}</p>
-                                    <span className="variant-count">{product.variants.length} Variants</span>
-                                </div>
-                            ))}
-                    </div>
+                    {inventoryLoading ? (
+                        <div className="loading-indicator">Loading inventory...</div>
+                    ) : (
+                        <div className="product-grid">
+                            {inventory
+                                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+                                .map(product => (
+                                    <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
+                                        <span className="brand-tag">{product.brand.name}</span>
+                                        <h3>{product.name}</h3>
+                                        <p className="price-label">Starts at ₹{product.basePrice}</p>
+                                        <span className="variant-count">{product.variants.length} Variants</span>
+                                    </div>
+                                ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* MODAL: Same Styles */}
