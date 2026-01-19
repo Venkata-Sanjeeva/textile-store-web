@@ -16,15 +16,12 @@ const BillingSummary = () => {
     const [activeProduct, setActiveProduct] = useState(null);
     const [showCamera, setShowCamera] = useState(false);
     const [discountOfVariants, setDiscountOfVariants] = useState({});
-    const [loading, setLoading] = useState(false);
 
     // Fetch Inventory
     useEffect(() => {
-        setLoading(true);
         axios.get(`${BACKEND_API_URL}/admin/products`)
             .then(res => setInventory(res.data))
-            .catch(err => console.error("Error fetching inventory", err))
-            .finally(() => setLoading(false));
+            .catch(err => console.error("Error fetching inventory", err));
     }, []);
 
     useEffect(() => {
@@ -238,7 +235,20 @@ const BillingSummary = () => {
         doc.text("No exchange without bill.", pageWidth / 2, finalY + 9, { align: "center" });
 
         // Save
-        doc.save(`${customerName}_${Date.now()}_Receipt.pdf`);
+        // 6. SAFE DOWNLOAD (Chrome Optimized)
+        const pdfBlob = doc.output("blob");
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = blobUrl;
+        downloadLink.download = `${customerName}_Receipt.pdf`;
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        // Clean up memory
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        
         setCart([]);
         alert("Receipt generated!");
         window.location.reload();
@@ -297,20 +307,16 @@ const BillingSummary = () => {
                     </div>
 
                     <div className="product-grid">
-                        {loading ? (
-                            <div className="loading-spinner">Loading...</div>
-                        ) : (
-                            inventory
-                                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                                .map(product => (
-                                    <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
-                                        <span className="brand-tag">{product.brand.name}</span>
-                                        <h3>{product.name}</h3>
-                                        <p className="price-label">Starts at ₹{product.basePrice}</p>
-                                        <span className="variant-count">{product.variants.length} Variants</span>
-                                    </div>
-                                ))
-                        )}
+                        {inventory
+                            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+                            .map(product => (
+                                <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
+                                    <span className="brand-tag">{product.brand.name}</span>
+                                    <h3>{product.name}</h3>
+                                    <p className="price-label">Starts at ₹{product.basePrice}</p>
+                                    <span className="variant-count">{product.variants.length} Variants</span>
+                                </div>
+                            ))}
                     </div>
                 </div>
 
@@ -376,9 +382,9 @@ const BillingSummary = () => {
                                     <div className="cart-item-left">
                                         <span className="cart-item-name">{item.name}</span>
                                         <span className="cart-item-meta">{item.color} • {item.size}</span>
-                                        <br/>
-                                        <span className="cart-item-meta" >Rs. 
-                                            <span style={{textDecoration: "line-through"}}>{item.price}</span>
+                                        <br />
+                                        <span className="cart-item-meta" >Rs.
+                                            <span style={{ textDecoration: "line-through" }}>{item.price}</span>
                                         </span>
                                     </div>
 
