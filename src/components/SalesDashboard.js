@@ -74,10 +74,10 @@ const SalesDashboard = () => {
                         <p style={labelStyle}>Total Revenue ({view})</p>
                         <h3 style={valueStyle}>₹{(stats.totalRevenue || 0).toLocaleString()}</h3>
                     </div>
-                    <div style={cardStyle}>
+                    {/* <div style={cardStyle}>
                         <p style={labelStyle}>Total Items Sold</p>
                         <h3 style={valueStyle}>{(stats.totalOrders || 0).toLocaleString()} Units</h3>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Chart Section */}
