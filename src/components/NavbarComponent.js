@@ -7,21 +7,34 @@ const NavbarComponent = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
 
-    useEffect(() => {
+    const checkUser = () => {
         const tokenData = sessionStorage.getItem("token");
-        
         if (tokenData) {
-            const parsedToken = JSON.parse(tokenData);
-            setUser({
-                id: parsedToken.id,
-                username: parsedToken.username,
-                role: parsedToken.role
-            });
+            setUser(JSON.parse(tokenData));
+        } else {
+            setUser(null);
         }
+    };
+
+    useEffect(() => {
+        // Initial check
+        checkUser();
+
+        // Listen for changes in other parts of the app (like VariantManager)
+        window.addEventListener('storage', checkUser);
+
+        // Custom interval check (Optional but safer for single-page redirects)
+        const interval = setInterval(checkUser, 1000);
+
+        return () => {
+            window.removeEventListener('storage', checkUser);
+            clearInterval(interval);
+        };
     }, []);
 
     const handleLogout = () => {
         sessionStorage.removeItem("token");
+        setUser(null); // Clear local state immediately
         navigate("/login");
     };
 
