@@ -16,12 +16,15 @@ const BillingSummary = () => {
     const [activeProduct, setActiveProduct] = useState(null);
     const [showCamera, setShowCamera] = useState(false);
     const [discountOfVariants, setDiscountOfVariants] = useState({});
+    const [loading, setLoading] = useState(false);
 
     // Fetch Inventory
     useEffect(() => {
+        setLoading(true);
         axios.get(`${BACKEND_API_URL}/admin/products`)
             .then(res => setInventory(res.data))
-            .catch(err => console.error("Error fetching inventory", err));
+            .catch(err => console.error("Error fetching inventory", err))
+            .finally(() => setLoading(false));
     }, []);
 
     useEffect(() => {
@@ -294,16 +297,20 @@ const BillingSummary = () => {
                     </div>
 
                     <div className="product-grid">
-                        {inventory
-                            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                            .map(product => (
-                                <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
-                                    <span className="brand-tag">{product.brand.name}</span>
-                                    <h3>{product.name}</h3>
-                                    <p className="price-label">Starts at ₹{product.basePrice}</p>
-                                    <span className="variant-count">{product.variants.length} Variants</span>
-                                </div>
-                            ))}
+                        {loading ? (
+                            <div className="loading-spinner">Loading...</div>
+                        ) : (
+                            inventory
+                                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+                                .map(product => (
+                                    <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
+                                        <span className="brand-tag">{product.brand.name}</span>
+                                        <h3>{product.name}</h3>
+                                        <p className="price-label">Starts at ₹{product.basePrice}</p>
+                                        <span className="variant-count">{product.variants.length} Variants</span>
+                                    </div>
+                                ))
+                        )}
                     </div>
                 </div>
 

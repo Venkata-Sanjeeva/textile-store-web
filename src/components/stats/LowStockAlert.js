@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+const BACKEND_API_URL = process.env.REACT_APP_API_URL;
+
 const LowStockAlert = () => {
     const [lowStock, setLowStock] = useState([]);
 
     useEffect(() => {
         // You'll need to create this endpoint in Spring Boot
-        axios.get('http://localhost:8080/api/admin/products/low-stock')
+        axios.get(`${BACKEND_API_URL}/admin/products/low-stock`)
             .then(res => setLowStock(res.data));
     }, []);
 

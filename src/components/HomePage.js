@@ -67,9 +67,14 @@ const HomePage = () => {
         setIsFiltering(true);
         const { categoryId, brandId, size, searchTerm } = filters;
 
-        axios.get(`${BACKEND_API_URL}/admin/products/filter`, {
-            params: { categoryId, brandId, size, search: searchTerm }
-        })
+        const params = {
+            categoryId: categoryId || undefined,
+            brandId: brandId || undefined,
+            size: size || undefined,
+            search: searchTerm || undefined
+        }
+
+        axios.get(`${BACKEND_API_URL}/admin/products/filter`, {params})
             .then(res => {
                 setFilteredProducts(res.data);
                 setIsFiltering(false);
@@ -130,7 +135,6 @@ const HomePage = () => {
                             <div key={categoryName} className="mb-5">
                                 <h3 className="border-bottom pb-2 mb-4">
                                     {categoryName}
-                                    {isFiltering && <small className="text-muted ms-2">({groupedProducts[categoryName].length} items found)</small>}
                                 </h3>
                                 <Row xs={1} md={2} lg={4} className="g-4">
                                     {groupedProducts[categoryName].map(product => (

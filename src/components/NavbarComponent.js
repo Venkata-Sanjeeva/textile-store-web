@@ -1,11 +1,24 @@
+import { use, useEffect, useState } from 'react';
 import { Navbar, Nav, Container, NavDropdown, Button } from 'react-bootstrap';
 import { BoxSeam, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
 import { useNavigate, Link } from 'react-router-dom';
 
 const NavbarComponent = () => {
     const navigate = useNavigate();
-    const tokenData = sessionStorage.getItem("token");
-    const user = tokenData ? JSON.parse(tokenData) : null;
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const tokenData = sessionStorage.getItem("token");
+        
+        if (tokenData) {
+            const parsedToken = JSON.parse(tokenData);
+            setUser({
+                id: parsedToken.id,
+                username: parsedToken.username,
+                role: parsedToken.role
+            });
+        }
+    }, []);
 
     const handleLogout = () => {
         sessionStorage.removeItem("token");
