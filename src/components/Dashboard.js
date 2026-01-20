@@ -5,6 +5,7 @@ import CategoryChart from './stats/CategoryChart';
 import LowStockAlert from './stats/LowStockAlert';
 import NavbarComponent from './NavbarComponent';
 import "../styles/Dashboard.css";
+import BrandChart from './stats/BrandChart';
 
 const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
@@ -34,12 +35,18 @@ const Dashboard = () => {
                             <StatsCard title="Out of Stock" value={stats.outOfStockCount} color="danger" />
                         </div>
 
+                        {/* 2. Visual Distribution & Alerts - Kept as row for side-by-side view */}
                         <div className="row mt-4">
-                            {/* 2. Visual Distribution & Alerts - Kept as row for side-by-side view */}
+                            {/* Charts side-by-side */}
                             <div className="col-md-6">
                                 <CategoryChart data={stats.categoryDistribution} />
                             </div>
                             <div className="col-md-6">
+                                <BrandChart data={stats.brandDistribution} />
+                            </div>
+                            
+                            {/* Alert spanning full width below */}
+                            <div className="col-12 mt-4">
                                 <LowStockAlert />
                             </div>
                         </div>

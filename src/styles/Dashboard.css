@@ -3,6 +3,7 @@
     padding: 2rem;
     background-color: #f8f9fc;
     min-height: 100vh;
+    height: 100%;
 }
 
 /* Stat Cards Grid */
@@ -11,6 +12,10 @@
     flex-direction: row; /* Stacks cards row-wise */
     gap: 10px;              /* This creates the uniform space between cards */
     width: 100%;
+}
+
+.card {
+    height: 100%;
 }
 
 .stat-card {

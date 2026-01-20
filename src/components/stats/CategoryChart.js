@@ -7,7 +7,7 @@ const CategoryChart = ({ data }) => {
 
     return (
         <div className="card shadow mb-4">
-            <div className="card-header">Inventory by Category</div>
+            <div className="card-header text-primary">Inventory by Category</div>
             <div className="card-body" style={{ height: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
