@@ -167,7 +167,7 @@ const VariantManager = () => {
                             <Card className="sticky-top shadow-sm" style={{ top: '20px' }}>
                                 <Card.Img
                                     variant="top"
-                                    src={`${BACKEND_API_URL}/product-images/${product?.imageUrl}`}
+                                    src={`${product?.imageUrl}`}
                                     style={{ height: '200px', objectFit: 'contain' }}
                                 />
                                 <Card.Body>

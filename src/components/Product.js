@@ -12,7 +12,7 @@ function Product({ product, totalStock }) {
             <div style={{ height: '220px', overflow: 'hidden', backgroundColor: '#f8f9fa' }}>
                 <Card.Img
                     variant="top"
-                    src={`${BACKEND_API_URL}/product-images/${product.imageUrl}`}
+                    src={`${product.imageUrl}`}
                     style={{ 
                         height: '100%', 
                         width: '100%', 

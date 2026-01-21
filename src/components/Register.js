@@ -54,8 +54,8 @@ const Register = () => {
                 ...response.data
             }));
 
-            alert("Admin Account Created! Redirecting to Dashboard...");
-            navigate('/admin/dashboard');
+            alert("Admin Account Created! Please Login...");
+            navigate('/login');
         } catch (err) {
             console.error("API Error:", err);
             setError("Failed to register admin. Please try again.");
