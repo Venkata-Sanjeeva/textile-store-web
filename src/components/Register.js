@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Container, Form, Button, Card, Alert } from 'react-bootstrap';
+import { Container, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NavbarComponent from './NavbarComponent';
@@ -15,6 +15,7 @@ const Register = () => {
     });
 
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -27,15 +28,18 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
 
         // Basic Validation
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match!");
+            setLoading(false);
             return;
         }
 
         if (formData.password.length < 6) {
             setError("Password must be at least 6 characters.");
+            setLoading(false);
             return;
         }
 
@@ -59,6 +63,8 @@ const Register = () => {
         } catch (err) {
             console.error("API Error:", err);
             setError("Failed to register admin. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -122,7 +128,7 @@ const Register = () => {
                             </Form.Group>
 
                             <Button variant="primary" type="submit" className="w-100 mb-3">
-                                Register Admin
+                                {loading ? <Spinner size="sm" /> : 'Register'}
                             </Button>
 
                             <div className="text-center">

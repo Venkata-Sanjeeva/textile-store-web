@@ -11,6 +11,8 @@ const Inventory = () => {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [categoryLoading, setCategoryLoading] = useState(false);
+    const [brandLoading, setBrandLoading] = useState(false);
 
     // Form States
     const [categoryName, setCategoryName] = useState('');
@@ -47,6 +49,7 @@ const Inventory = () => {
 
     const handleAddCategory = async (e) => {
         e.preventDefault();
+        setCategoryLoading(true);
         try {
             await axios.post(`${BACKEND_API_URL}/categories`, { name: categoryName });
             setCategoryName('');
@@ -54,11 +57,14 @@ const Inventory = () => {
             setMessage({ type: 'success', text: `Category "${categoryName}" Added!` });
         } catch (error) {
             setMessage({ type: 'danger', text: 'Failed to Add Category!' });
+        } finally {
+            setCategoryLoading(false);
         }
     };
 
     const handleAddBrand = async (e) => {
         e.preventDefault();
+        setBrandLoading(true);
         try {
             await axios.post(`${BACKEND_API_URL}/brands`, { name: brandName });
             setBrandName('');
@@ -66,6 +72,8 @@ const Inventory = () => {
             setMessage({ type: 'success', text: `Brand "${brandName}" Added!` });
         } catch (error) {
             setMessage({ type: 'danger', text: 'Failed to Add Brand!' });
+        } finally {
+            setBrandLoading(false);
         }
     };
 
@@ -210,7 +218,9 @@ const Inventory = () => {
                                             onChange={(e) => setCategoryName(e.target.value)} 
                                             placeholder="e.g. Shirts" 
                                         />
-                                        <Button variant="dark" type="submit" size="sm">Add Category</Button>
+                                        <Button variant="dark" type="submit" size="sm">
+                                            {categoryLoading ? <Spinner size="sm" /> : "Add Category"}
+                                        </Button>
                                     </Form>
                                 </Card>
                             </Col>
@@ -224,7 +234,9 @@ const Inventory = () => {
                                             onChange={(e) => setBrandName(e.target.value)} 
                                             placeholder="e.g. Adidas" 
                                         />
-                                        <Button variant="dark" type="submit" size="sm">Add Brand</Button>
+                                        <Button variant="dark" type="submit" size="sm">
+                                            {brandLoading ? <Spinner size="sm" /> : "Add Brand"}
+                                        </Button>
                                     </Form>
                                 </Card>
                             </Col>

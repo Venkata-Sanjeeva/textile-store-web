@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Form, Button, Card, Alert } from 'react-bootstrap';
+import { Container, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NavbarComponent from './NavbarComponent';
@@ -9,6 +9,7 @@ const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 const LoginPage = () => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate(); // Placeholder for navigation logic
 
     useEffect(() => {
@@ -20,6 +21,7 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
             const response = await axios.post(`${BACKEND_API_URL}/auth/login`, credentials);
             // Save the token so the browser remembers the admin
@@ -31,6 +33,8 @@ const LoginPage = () => {
             navigate('/admin/dashboard'); // Send admin to the dashboard
         } catch (err) {
             setError('Invalid Username or Password');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -60,7 +64,10 @@ const LoginPage = () => {
                                 />
                             </Form.Group>
                             <Button variant="primary" type="submit" className="w-100">
-                                Login to Dashboard
+                                {loading ? <>
+                                    <Spinner animation="border" size="sm" /> &nbsp;
+                                    Logging in...
+                                </> : 'Login'}
                             </Button>
                         </Form>
                     </Card.Body>

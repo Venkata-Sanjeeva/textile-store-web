@@ -12,7 +12,6 @@ const HomePage = () => {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isFiltering, setIsFiltering] = useState(false);
 
     // Stores stock quantity indexed by uniqueId
     const [prodQuantity, setProdQuantity] = useState({});
@@ -64,7 +63,6 @@ const HomePage = () => {
 
     // 2. Optimized Filter Handler
     const handleFilterUpdate = (filters) => {
-        setIsFiltering(true);
         const { categoryId, brandId, size, searchTerm } = filters;
 
         const params = {
@@ -77,7 +75,6 @@ const HomePage = () => {
         axios.get(`${BACKEND_API_URL}/admin/products/filter`, {params})
             .then(res => {
                 setFilteredProducts(res.data);
-                setIsFiltering(false);
             })
             .catch(err => console.error(err));
     };

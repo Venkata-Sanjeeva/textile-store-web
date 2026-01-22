@@ -15,6 +15,7 @@ const VariantManager = () => {
     const [product, setProduct] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [variantsLoading, setVariantsLoading] = useState(false);
 
     const [availableVariants, setAvailableVariants] = useState([]);
     const [newVariants, setNewVariants] = useState([]);
@@ -94,10 +95,12 @@ const VariantManager = () => {
 
     const handleSaveNewVariants = async () => {
         if (newVariants.length === 0) return;
+        setVariantsLoading(true);
 
         try {
             // Bulk create expects List<ProductVariantDTO>
             await axios.post(`${BACKEND_API_URL}/admin/variants/bulk-create`, newVariants);
+            setVariantsLoading(false);
             alert("New variants added successfully!");
 
             // Refresh existing list and clear form
@@ -105,16 +108,20 @@ const VariantManager = () => {
             setNewVariants([]);
         } catch (err) {
             console.error(err);
+            setVariantsLoading(false);
             alert("Error saving variants: " + (err.response?.data || err.message));
         }
     };
 
     if (isAuthenticated && loading) {
         return (
-            <div className="text-center mt-5">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-2">Loading Product Data...</p>
-            </div>
+            <>
+                <NavbarComponent />
+                <div className="text-center mt-5">
+                    <Spinner animation="border" variant="primary" />
+                    <p className="mt-2">Loading Product Data...</p>
+                </div>
+            </>
         );
     }
 
@@ -233,7 +240,7 @@ const VariantManager = () => {
                                         </Table>
                                         <div className="d-grid mt-3">
                                             <Button variant="success" onClick={handleSaveNewVariants}>
-                                                Save All New Variants
+                                                {variantsLoading ? <Spinner size="sm" /> : "Save All New Variants"}
                                             </Button>
                                         </div>
                                     </Card>

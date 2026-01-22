@@ -7,7 +7,7 @@ const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
 const AvailableVariantsTable = ({ availableVariants, setAvailableVariants }) => {
     const [editingId, setEditingId] = useState(null); 
-    const [tempStock, setTempStock] = useState("");   
+    const [tempStock, setTempStock] = useState("");
 
     const startEditing = (v, ind) => {
         setEditingId(ind);
