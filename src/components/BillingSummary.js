@@ -6,6 +6,7 @@ import '../styles/BillingSummary.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import CustomerModal from './CustomerModal';
 
 const BACKEND_API_URL = process.env.REACT_APP_API_URL;
 
@@ -17,6 +18,66 @@ const BillingSummary = () => {
     const [showCamera, setShowCamera] = useState(false);
     const [discountOfVariants, setDiscountOfVariants] = useState({});
     const [inventoryLoading, setInventoryLoading] = useState(true);
+
+    const [showCustomerModal, setShowCustomerModal] = useState(false);
+
+    const handleCompleteOrder = async (customerData) => {
+        // 1. Prepare the nested JSON structure for the Backend
+        const purchaseData = {
+            // purchaseUniqueId: `INV-${Date.now()}`, // Backend can generate this
+            customerName: customerData.name || 'Guest',
+            customerPhone: customerData.phone || '',
+            subtotal: subtotal,
+            tax: tax,
+            totalAmount: total,
+            // Mapping cart items to match the PurchaseItem format in Java
+            items: cart.map(item => ({
+                // itemUniqueId: item.cartKey, // Backend can generate this
+                productName: item.name,
+                productVariant: `${item.color} / ${item.size}`,
+                quantity: item.qty,
+                unitPriceAtPurchase: item.price,
+                discountApplied: discountOfVariants[item.cartKey] || 0
+            }))
+        };
+
+        console.log("Sending Purchase Data to Backend:", purchaseData);
+
+        try {
+            // 2. Send POST request to your new Purchase Controller
+            const response = await axios.post(`${BACKEND_API_URL}/admin/purchases/finalize`, purchaseData);
+
+            if (response.status === 201) {
+                console.log("Order saved successfully in Database");
+
+                // 3. Update Inventory (Keep your existing stock decrement logic)
+                try {
+                    const billingProducts = cart.map(item => ({
+                        productId: item.productId,
+                        variantId: item.variantId,
+                        variantUniqueId: item.cartKey,
+                        quantity: item.qty,
+                        totalPrice: (item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty
+                    }));
+
+                    await axios.put(`${BACKEND_API_URL}/admin/billing`, billingProducts)
+                        .then(res => console.log("Billing updated", res.data))
+                        .catch(err => console.error("Error updating billing", err));
+
+                } catch (err) {
+                    console.error("Error", err);
+                }
+
+                // 4. Proceed to generate PDF
+                await generateReceipt(response.data.purchaseId, customerData.name || 'Guest');
+            }
+        } catch (error) {
+            console.error("Error completing order:", error);
+            alert("Failed to save order. Please check backend connection.");
+        } finally {
+            setShowCustomerModal(false);
+        }
+    };
 
     // Fetch Inventory
     useEffect(() => {
@@ -32,6 +93,14 @@ const BillingSummary = () => {
             const scanner = new Html5QrcodeScanner("reader", {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
+                // Add this to support standard retail barcodes + QR codes
+                formatsToSupport: [
+                    0, // QR_CODE
+                    5, // EAN_13 (Standard barcodes)
+                    6, // EAN_8
+                    7, // CODE_39
+                    8, // CODE_128
+                ]
             });
 
             scanner.render((decodedText) => {
@@ -127,314 +196,303 @@ const BillingSummary = () => {
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
 
-    const generateReceipt = async () => {
-        // 1. Setup for Thermal Printer Format (80mm width)
-        // We use a long height (e.g., 200mm) and jsPDF will clip it, 
-        // or we can calculate it based on cart length.
-        const receiptWidth = 80;
-        const receiptHeight = 150 + (cart.length * 15); // Dynamic height
-        const doc = new jsPDF({
-            unit: "mm",
-            format: [receiptWidth, receiptHeight]
-        });
+    const generateReceipt = async (purchaseId = "", customerName = "") => {
+    // 1. Setup for Thermal Printer Format (80mm width)
+    // We use a long height (e.g., 200mm) and jsPDF will clip it, 
+    // or we can calculate it based on cart length.
+    const receiptWidth = 80;
+    const receiptHeight = 150 + (cart.length * 15); // Dynamic height
+    const doc = new jsPDF({
+        unit: "mm",
+        format: [receiptWidth, receiptHeight]
+    });
 
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 5;
-        const date = new Date().toLocaleString();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 5;
+    const date = new Date().toLocaleString();
 
-        // 2. Header (Store Branding)
-        doc.setFont("courier", "bold");
-        doc.setFontSize(14);
-        doc.text("ICON MEN'S STORE", pageWidth / 2, 10, { align: "center" });
+    // 2. Header (Store Branding)
+    doc.setFont("courier", "bold");
+    doc.setFontSize(14);
+    doc.text("ICON MEN'S STORE", pageWidth / 2, 10, { align: "center" });
 
-        doc.setFont("courier", "normal");
-        doc.setFontSize(8);
+    doc.setFont("courier", "normal");
+    doc.setFontSize(8);
 
-        // Split the address into two lines for better readability on narrow paper
-        doc.text("Room No:2, Theru Road,", pageWidth / 2, 15, { align: "center" });
-        doc.text("Opp. PNB, Jammalamadugu", pageWidth / 2, 19, { align: "center" });
+    // Split the address into two lines for better readability on narrow paper
+    doc.text("Room No:2, Theru Road,", pageWidth / 2, 15, { align: "center" });
+    doc.text("Opp. PNB, Jammalamadugu", pageWidth / 2, 19, { align: "center" });
 
-        doc.text("GSTIN: 27AAAAA0000A1Z5", pageWidth / 2, 23, { align: "center" });
-        doc.text("-".repeat(45), pageWidth / 2, 27, { align: "center" });
+    doc.text("GSTIN: 27AAAAA0000A1Z5", pageWidth / 2, 23, { align: "center" });
+    doc.text("-".repeat(45), pageWidth / 2, 27, { align: "center" });
 
-        // Adjusted the start of the date to 32 to accommodate the extra line
-        doc.setFontSize(7);
-        doc.text(`Date: ${date}`, margin, 32);
-        doc.text("-".repeat(45), pageWidth / 2, 36, { align: "center" });
+    // Adjusted the start of the date to 32 to accommodate the extra line
+    doc.setFontSize(7);
+    doc.text(`Date: ${date}`, margin, 32);
+    doc.text("-".repeat(45), pageWidth / 2, 36, { align: "center" });
 
-        // 3. Compact Table Generation
-        const tableRows = cart.map(item => [
-            `${item.brand} ${item.name}\nSize: ${item.size}\nColour: ${item.color}\nOriginal: Rs.${item.price}\nDisc: ${discountOfVariants[item.cartKey] || 0}%`,
-            `${item.qty}`,
-            `${((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}`
-        ]);
+    // 3. Compact Table Generation
+    const tableRows = cart.map(item => [
+        `${item.brand} ${item.name}\nSize: ${item.size}\nColour: ${item.color}\nOriginal: Rs.${item.price}\nDisc: ${discountOfVariants[item.cartKey] || 0}%`,
+        `${item.qty}`,
+        `${((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}`
+    ]);
 
-        autoTable(doc, {
-            head: [["Item", "Qty", "Amt"]],
-            body: tableRows,
-            startY: 40,
-            theme: 'plain', // Minimalist theme for thermal look
-            styles: { font: "courier", fontSize: 7, cellPadding: 1 },
-            headStyles: { fontStyle: 'bold', textColor: [0, 0, 0] },
-            columnStyles: {
-                0: { cellWidth: 40 },
-                1: { halign: 'center' },
-                2: { halign: 'right' }
-            },
-            margin: { left: margin, right: margin }
-        });
+    autoTable(doc, {
+        head: [["Item", "Qty", "Amt"]],
+        body: tableRows,
+        startY: 40,
+        theme: 'plain', // Minimalist theme for thermal look
+        styles: { font: "courier", fontSize: 7, cellPadding: 1 },
+        headStyles: { fontStyle: 'bold', textColor: [0, 0, 0] },
+        columnStyles: {
+            0: { cellWidth: 40 },
+            1: { halign: 'center' },
+            2: { halign: 'right' }
+        },
+        margin: { left: margin, right: margin }
+    });
 
-        // 4. Totals Section
-        let finalY = doc.lastAutoTable.finalY + 5;
-        const rightMargin = pageWidth - margin;
+    // 4. Totals Section
+    let finalY = doc.lastAutoTable.finalY + 5;
+    const rightMargin = pageWidth - margin;
 
-        doc.text("-".repeat(45), pageWidth / 2, finalY, { align: "center" });
-        finalY += 5;
+    doc.text("-".repeat(45), pageWidth / 2, finalY, { align: "center" });
+    finalY += 5;
 
-        doc.setFontSize(8);
-        doc.text(`Subtotal:`, margin, finalY);
-        doc.text(`${subtotal.toFixed(2)}`, rightMargin, finalY, { align: "right" });
+    doc.setFontSize(8);
+    doc.text(`Subtotal:`, margin, finalY);
+    doc.text(`${subtotal.toFixed(2)}`, rightMargin, finalY, { align: "right" });
 
-        finalY += 5;
-        doc.text(`GST (18%):`, margin, finalY);
-        doc.text(`${tax.toFixed(2)}`, rightMargin, finalY, { align: "right" });
+    finalY += 5;
+    doc.text(`GST (18%):`, margin, finalY);
+    doc.text(`${tax.toFixed(2)}`, rightMargin, finalY, { align: "right" });
 
-        finalY += 7;
-        doc.setFont("courier", "bold");
-        doc.setFontSize(10);
-        doc.text(`GRAND TOTAL:`, margin, finalY);
-        doc.text(`INR ${total.toFixed(2)}`, rightMargin, finalY, { align: "right" });
+    finalY += 7;
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.text(`GRAND TOTAL:`, margin, finalY);
+    doc.text(`INR ${total.toFixed(2)}`, rightMargin, finalY, { align: "right" });
 
-        // 5. Backend Update & QR
-        const customerName = prompt("Enter customer name:") || 'Guest';
-        try {
-            const billingProducts = cart.map(item => ({
-                productId: item.productId,
-                variantId: item.variantId,
-                variantUniqueId: item.cartKey,
-                quantity: item.qty,
-                totalPrice: (item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty
-            }));
+    // 5. QR Code Generation
 
-            await axios.put(`${BACKEND_API_URL}/admin/billing`, billingProducts)
-                .then(res => console.log("Billing updated", res.data))
-                .catch(err => console.error("Error updating billing", err));
+    const qrData = `PurchaseID:${purchaseId}|Total:${total.toFixed(2)}`;
+    const qrDataUrl = await QRCode.toDataURL(qrData);
 
-            const qrData = `Order:${Date.now()}|Total:${total.toFixed(2)}`;
-            const qrDataUrl = await QRCode.toDataURL(qrData);
+    // Center QR Code
+    const qrSize = 25;
+    doc.addImage(qrDataUrl, 'PNG', (pageWidth / 2) - (qrSize / 2), finalY + 5, qrSize, qrSize);
+    finalY += (qrSize + 10);
 
-            // Center QR Code
-            const qrSize = 25;
-            doc.addImage(qrDataUrl, 'PNG', (pageWidth / 2) - (qrSize / 2), finalY + 5, qrSize, qrSize);
-            finalY += (qrSize + 10);
-        } catch (err) {
-            console.error("Error", err);
-        }
+    // 6. Footer
+    doc.setFont("courier", "italic");
+    doc.setFontSize(8);
+    doc.text("Thank you for shopping at ICON!", pageWidth / 2, finalY + 5, { align: "center" });
+    doc.text("No exchange without bill.", pageWidth / 2, finalY + 9, { align: "center" });
 
-        // 6. Footer
-        doc.setFont("courier", "italic");
-        doc.setFontSize(8);
-        doc.text("Thank you for shopping at ICON!", pageWidth / 2, finalY + 5, { align: "center" });
-        doc.text("No exchange without bill.", pageWidth / 2, finalY + 9, { align: "center" });
+    // Save
+    // 6. SAFE DOWNLOAD (Chrome Optimized)
+    const pdfBlob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = blobUrl;
+    downloadLink.download = `${customerName}_Receipt.pdf`;
 
-        // Save
-        // 6. SAFE DOWNLOAD (Chrome Optimized)
-        const pdfBlob = doc.output("blob");
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const downloadLink = document.createElement("a");
-        downloadLink.href = blobUrl;
-        downloadLink.download = `${customerName}_Receipt.pdf`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
 
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+    // Clean up memory
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
 
-        // Clean up memory
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    setCart([]);
+    alert("Receipt generated!");
+    window.location.reload();
+};
 
-        setCart([]);
-        alert("Receipt generated!");
-        window.location.reload();
-    };
+return (
+    <div className="light-theme-wrapper">
+        <NavbarComponent />
 
-    return (
-        <div className="light-theme-wrapper">
-            <NavbarComponent />
+        {showCamera && (
+            <div className="modal-overlay">
+                <div className="variant-modal" style={{ maxWidth: '450px' }}>
+                    <div className="modal-header">
+                        <div className="header-text">
+                            <h2>Scan Barcode</h2>
+                            <span className="brand-label">Camera Active</span>
+                        </div>
+                        <button className="icon-close" onClick={() => setShowCamera(false)}>&times;</button>
+                    </div>
 
-            {showCamera && (
-                <div className="modal-overlay">
-                    <div className="variant-modal" style={{ maxWidth: '450px' }}>
-                        <div className="modal-header">
-                            <div className="header-text">
-                                <h2>Scan Barcode</h2>
-                                <span className="brand-label">Camera Active</span>
-                            </div>
-                            <button className="icon-close" onClick={() => setShowCamera(false)}>&times;</button>
+                    <div style={{ padding: '20px' }}>
+                        <div className="scanner-viewport">
+                            <div className="scanning-line"></div>
+                            <div id="reader"></div>
                         </div>
 
-                        <div style={{ padding: '20px' }}>
-                            <div className="scanner-viewport">
-                                <div className="scanning-line"></div>
-                                <div id="reader"></div>
-                            </div>
+                        <div className="camera-modal-footer">
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                Center the barcode within the camera view to scan automatically.
+                            </p>
+                            <button className="checkout-action-btn"
+                                style={{ background: 'var(--danger)' }}
+                                onClick={() => setShowCamera(false)}>
+                                Close Scanner
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
-                            <div className="camera-modal-footer">
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                                    Center the barcode within the camera view to scan automatically.
-                                </p>
-                                <button className="checkout-action-btn"
-                                    style={{ background: 'var(--danger)' }}
-                                    onClick={() => setShowCamera(false)}>
-                                    Close Scanner
-                                </button>
+        <div className="pos-container">
+            {/* LEFT: Product Grid (Same Styles) */}
+            <div className="inventory-section">
+                <div className="search-header">
+                    <input
+                        type="text"
+                        placeholder="Search or Scan Barcode..."
+                        className="search-input"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button onClick={() => setShowCamera(true)} className="camera-btn">
+                        📷 Use Camera Scanner
+                    </button>
+                </div>
+
+                {inventoryLoading ? (
+                    <div className="loading-indicator">Loading inventory...</div>
+                ) : (
+                    <div className="product-grid">
+                        {inventory
+                            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+                            .map(product => (
+                                <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
+                                    <span className="brand-tag">{product.brand.name}</span>
+                                    <h3>{product.name}</h3>
+                                    <p className="price-label">Starts at ₹{product.basePrice}</p>
+                                    <span className="variant-count">{product.variants.length} Variants</span>
+                                </div>
+                            ))}
+                    </div>
+                )}
+            </div>
+
+            {/* MODAL: Same Styles */}
+            {activeProduct && (
+                <div className="modal-overlay" onClick={() => setActiveProduct(null)}>
+                    <div className="variant-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="header-text">
+                                <h2>{activeProduct.name}</h2>
+                                <span className="brand-label">{activeProduct.brand.name}</span>
                             </div>
+                            <button className="icon-close" onClick={() => setActiveProduct(null)}>&times;</button>
+                        </div>
+
+                        <div className="variant-grid-container">
+                            <div className="grid-header">
+                                <span>Color / Size</span>
+                                <span>Stock Status</span>
+                                <span>Unit Price</span>
+                            </div>
+                            <div className="variant-scroll-area">
+                                {activeProduct.variants.map(v => (
+                                    <button
+                                        key={v.id}
+                                        className="variant-selection-row"
+                                        disabled={v.stockQuantity === 0}
+                                        onClick={() => handleAddToCart(activeProduct, v)}
+                                    >
+                                        <div className="v-capsules">
+                                            <span className="color-pill">{v.color}</span>
+                                            <span className="size-pill">{v.size}</span>
+                                        </div>
+                                        <div className="v-stock-status">
+                                            <span className={`status-dot ${v.stockQuantity < 5 ? 'low' : 'good'}`}></span>
+                                            {v.stockQuantity} Available
+                                        </div>
+                                        <div className="v-price-display">₹ {activeProduct.basePrice + v.additionalPrice}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="cancel-text-btn" onClick={() => setActiveProduct(null)}>Cancel Selection</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="pos-container">
-                {/* LEFT: Product Grid (Same Styles) */}
-                <div className="inventory-section">
-                    <div className="search-header">
-                        <input
-                            type="text"
-                            placeholder="Search or Scan Barcode..."
-                            className="search-input"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <button onClick={() => setShowCamera(true)} className="camera-btn">
-                            📷 Use Camera Scanner
-                        </button>
-                    </div>
-
-                    {inventoryLoading ? (
-                        <div className="loading-indicator">Loading inventory...</div>
-                    ) : (
-                        <div className="product-grid">
-                            {inventory
-                                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                                .map(product => (
-                                    <div key={product.id} className="product-card" onClick={() => setActiveProduct(product)}>
-                                        <span className="brand-tag">{product.brand.name}</span>
-                                        <h3>{product.name}</h3>
-                                        <p className="price-label">Starts at ₹{product.basePrice}</p>
-                                        <span className="variant-count">{product.variants.length} Variants</span>
-                                    </div>
-                                ))}
+            {/* RIGHT: Sidebar (Same Styles) */}
+            <div className="billing-sidebar">
+                <div className="sidebar-header">Current Order</div>
+                <div className="cart-list">
+                    {cart.length === 0 ? (
+                        <div className="empty-cart-view">
+                            <div className="empty-icon">🛒</div>
+                            <p>No items in cart</p>
+                            <span>Scan a barcode or click a product</span>
                         </div>
+                    ) : (
+                        cart.map(item => (
+                            <div key={item.cartKey} className="cart-item-row">
+                                <div className="cart-item-left">
+                                    <span className="cart-item-name">{item.name}</span>
+                                    <span className="cart-item-meta">{item.color} • {item.size}</span>
+                                    <br />
+                                    <span className="cart-item-meta" >Rs.
+                                        <span style={{ textDecoration: "line-through" }}>{item.price}</span>
+                                    </span>
+                                </div>
+
+                                <div className="cart-item-middle">
+                                    <div className="discount-control">
+                                        <span className="cart-item-discount">Discount %</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="99"
+                                            className="discount-input"
+                                            value={discountOfVariants[item.cartKey] || ""}
+                                            onChange={e => updateDiscount(item.cartKey, Number(e.target.value))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="cart-item-right">
+                                    <div className="qty-controls">
+                                        <button onClick={() => updateQty(item.cartKey, -1)}>−</button>
+                                        <span>{item.qty}</span>
+                                        <button onClick={() => updateQty(item.cartKey, 1)}>+</button>
+                                    </div>
+                                    <div className="cart-item-price">₹{((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}</div>
+                                    <button className="remove-btn" onClick={() => removeFromCart(item.cartKey)}>×</button>
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
 
-                {/* MODAL: Same Styles */}
-                {activeProduct && (
-                    <div className="modal-overlay" onClick={() => setActiveProduct(null)}>
-                        <div className="variant-modal" onClick={e => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <div className="header-text">
-                                    <h2>{activeProduct.name}</h2>
-                                    <span className="brand-label">{activeProduct.brand.name}</span>
-                                </div>
-                                <button className="icon-close" onClick={() => setActiveProduct(null)}>&times;</button>
-                            </div>
-
-                            <div className="variant-grid-container">
-                                <div className="grid-header">
-                                    <span>Color / Size</span>
-                                    <span>Stock Status</span>
-                                    <span>Unit Price</span>
-                                </div>
-                                <div className="variant-scroll-area">
-                                    {activeProduct.variants.map(v => (
-                                        <button
-                                            key={v.id}
-                                            className="variant-selection-row"
-                                            disabled={v.stockQuantity === 0}
-                                            onClick={() => handleAddToCart(activeProduct, v)}
-                                        >
-                                            <div className="v-capsules">
-                                                <span className="color-pill">{v.color}</span>
-                                                <span className="size-pill">{v.size}</span>
-                                            </div>
-                                            <div className="v-stock-status">
-                                                <span className={`status-dot ${v.stockQuantity < 5 ? 'low' : 'good'}`}></span>
-                                                {v.stockQuantity} Available
-                                            </div>
-                                            <div className="v-price-display">₹ {activeProduct.basePrice + v.additionalPrice}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button className="cancel-text-btn" onClick={() => setActiveProduct(null)}>Cancel Selection</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* RIGHT: Sidebar (Same Styles) */}
-                <div className="billing-sidebar">
-                    <div className="sidebar-header">Current Order</div>
-                    <div className="cart-list">
-                        {cart.length === 0 ? (
-                            <div className="empty-cart-view">
-                                <div className="empty-icon">🛒</div>
-                                <p>No items in cart</p>
-                                <span>Scan a barcode or click a product</span>
-                            </div>
-                        ) : (
-                            cart.map(item => (
-                                <div key={item.cartKey} className="cart-item-row">
-                                    <div className="cart-item-left">
-                                        <span className="cart-item-name">{item.name}</span>
-                                        <span className="cart-item-meta">{item.color} • {item.size}</span>
-                                        <br />
-                                        <span className="cart-item-meta" >Rs.
-                                            <span style={{ textDecoration: "line-through" }}>{item.price}</span>
-                                        </span>
-                                    </div>
-
-                                    <div className="cart-item-middle">
-                                        <div className="discount-control">
-                                            <span className="cart-item-discount">Discount %</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="99"
-                                                className="discount-input"
-                                                value={discountOfVariants[item.cartKey] || ""}
-                                                onChange={e => updateDiscount(item.cartKey, Number(e.target.value))}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="cart-item-right">
-                                        <div className="qty-controls">
-                                            <button onClick={() => updateQty(item.cartKey, -1)}>−</button>
-                                            <span>{item.qty}</span>
-                                            <button onClick={() => updateQty(item.cartKey, 1)}>+</button>
-                                        </div>
-                                        <div className="cart-item-price">₹{((item.price * (1 - (discountOfVariants[item.cartKey] || 0) / 100)) * item.qty).toFixed(2)}</div>
-                                        <button className="remove-btn" onClick={() => removeFromCart(item.cartKey)}>×</button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    <div className="billing-footer">
-                        <div className="bill-row"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
-                        <div className="bill-row"><span>Tax (GST 18%)</span><span>₹{tax.toFixed(2)}</span></div>
-                        <div className="bill-total"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
-                        <button className="checkout-action-btn" disabled={cart.length === 0} onClick={generateReceipt}>
+                <div className="billing-footer">
+                    <div className="bill-row"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
+                    <div className="bill-row"><span>Tax (GST 18%)</span><span>₹{tax.toFixed(2)}</span></div>
+                    <div className="bill-total"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+                    {/* <button className="checkout-action-btn" disabled={cart.length === 0} onClick={generateReceipt}>
                             FINALIZE & PRINT RECEIPT
-                        </button>
-                    </div>
+                        </button> */}
+                    <button className="checkout-action-btn" disabled={cart.length === 0} onClick={() => setShowCustomerModal(true)}>
+                        FINALIZE
+                    </button>
                 </div>
             </div>
         </div>
-    );
+
+        {showCustomerModal && (<CustomerModal showCustomerModal={showCustomerModal} setShowCustomerModal={setShowCustomerModal} handleCompleteOrder={handleCompleteOrder} />)}
+    </div>
+);
 };
 
 export default BillingSummary;
