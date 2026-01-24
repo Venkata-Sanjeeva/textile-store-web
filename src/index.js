@@ -1,3 +1,4 @@
+import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
@@ -12,9 +13,8 @@ import Dashboard from './components/Dashboard';
 import BillingSummary from './components/BillingSummary';
 import VariantManager from './components/VariantManager';
 import BulkLabelGenerator from './components/BulkLabelGenerator';
-
-import 'bootstrap/dist/css/bootstrap.min.css';
 import SalesDashboard from './components/SalesDashboard';
+import PurchaseHistory from './components/PurchaseHistory';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -26,6 +26,7 @@ const routes = createBrowserRouter([
     {path: "/admin/dashboard", element: <AdminRoute children={<Dashboard />}></AdminRoute>},
     {path: "/admin/inventory", element: <AdminRoute children={<Inventory />}></AdminRoute>},
     {path: "/admin/billing", element: <AdminRoute children={<BillingSummary />}></AdminRoute>},
+    {path: "/admin/purchase-history", element: <AdminRoute children={<PurchaseHistory />}></AdminRoute>},
     {path: "/admin/print-labels", element: <AdminRoute children={<BulkLabelGenerator />}></AdminRoute>},
     {path: "/admin/sales", element: <AdminRoute children={<SalesDashboard />}></AdminRoute>},
     {path: "*", element: <div>404 Not Found</div>}

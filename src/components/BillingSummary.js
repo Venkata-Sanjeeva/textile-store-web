@@ -18,11 +18,13 @@ const BillingSummary = () => {
     const [showCamera, setShowCamera] = useState(false);
     const [discountOfVariants, setDiscountOfVariants] = useState({});
     const [inventoryLoading, setInventoryLoading] = useState(true);
+    const [loadingBill, setLoadingBill] = useState(false);
 
     const [showCustomerModal, setShowCustomerModal] = useState(false);
 
     const handleCompleteOrder = async (customerData) => {
         // 1. Prepare the nested JSON structure for the Backend
+        setLoadingBill(true);
         const purchaseData = {
             // purchaseUniqueId: `INV-${Date.now()}`, // Backend can generate this
             customerName: customerData.name || 'Guest',
@@ -68,15 +70,21 @@ const BillingSummary = () => {
                     console.error("Error", err);
                 }
 
+                console.log("Backend Response:", response);
+                const purchaseObj = response.data;
+                console.log("Received Purchase Object:", purchaseObj);
+
                 // 4. Proceed to generate PDF
-                await generateReceipt(response.data.purchaseId, customerData.name || 'Guest');
+                await generateReceipt(purchaseObj.purchaseUniqueId, customerData.name || 'Guest');
             }
         } catch (error) {
             console.error("Error completing order:", error);
             alert("Failed to save order. Please check backend connection.");
         } finally {
+            setLoadingBill(false);
             setShowCustomerModal(false);
         }
+        window.location.reload();
     };
 
     // Fetch Inventory
@@ -307,7 +315,6 @@ const BillingSummary = () => {
 
     setCart([]);
     alert("Receipt generated!");
-    window.location.reload();
 };
 
 return (
@@ -490,7 +497,7 @@ return (
             </div>
         </div>
 
-        {showCustomerModal && (<CustomerModal showCustomerModal={showCustomerModal} setShowCustomerModal={setShowCustomerModal} handleCompleteOrder={handleCompleteOrder} />)}
+        {showCustomerModal && (<CustomerModal showCustomerModal={showCustomerModal} setShowCustomerModal={setShowCustomerModal} handleCompleteOrder={handleCompleteOrder} loading={loadingBill} />)}
     </div>
 );
 };

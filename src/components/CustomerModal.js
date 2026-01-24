@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
+import { Modal, Button, Form, InputGroup, Spinner } from 'react-bootstrap';
 // import 'bootstrap-icons/font/bootstrap-icons.css';
 
-const CustomerModal = ({ showCustomerModal, setShowCustomerModal, handleCompleteOrder }) => {
+const CustomerModal = ({ showCustomerModal, setShowCustomerModal, handleCompleteOrder, loading }) => {
     // Add state to hold the info from the modal
     const [customerInfo, setCustomerInfo] = useState({ name: 'Guest', phone: '' });
 
@@ -66,14 +66,6 @@ const CustomerModal = ({ showCustomerModal, setShowCustomerModal, handleComplete
             {/* Footer */}
             <Modal.Footer style={{ borderTop: 'none', padding: '15px 24px 24px' }}>
                 <Button
-                    variant="link"
-                    className="text-decoration-none text-muted"
-                    onClick={() => setShowCustomerModal(false)}
-                    style={{ fontSize: '0.9rem' }}
-                >
-                    Skip
-                </Button>
-                <Button
                     onClick={() => handleCompleteOrder(customerInfo)}
                     style={{
                         background: 'var(--primary)',
@@ -84,7 +76,11 @@ const CustomerModal = ({ showCustomerModal, setShowCustomerModal, handleComplete
                         borderRadius: '6px'
                     }}
                 >
-                    Generate Receipt <i className="bi bi-printer ms-2"></i>
+                    {loading ? (
+                        <Spinner animation="border" size="sm" />
+                    ) : (
+                        <>Generate Receipt <i className="bi bi-printer ms-2"></i></>
+                    )}
                 </Button>
             </Modal.Footer>
         </Modal>
