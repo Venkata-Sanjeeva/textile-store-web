@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import NavbarComponent from './NavbarComponent';
 import axios from 'axios';
 import QRCode from 'qrcode';

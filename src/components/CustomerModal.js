@@ -77,7 +77,10 @@ const CustomerModal = ({ showCustomerModal, setShowCustomerModal, handleComplete
                     }}
                 >
                     {loading ? (
-                        <Spinner animation="border" size="sm" />
+                        <>
+                            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                            Generating...
+                        </>
                     ) : (
                         <>Generate Receipt <i className="bi bi-printer ms-2"></i></>
                     )}

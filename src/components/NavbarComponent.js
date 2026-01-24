@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navbar, Nav, Container, NavDropdown, Button } from 'react-bootstrap';
 import { BoxSeam, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
 import { useNavigate, Link } from 'react-router-dom';
